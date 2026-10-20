@@ -1,8 +1,12 @@
 # StoreToIssues 业务说明
 
+进度与功能清单见 **[PROGRESS.md](./PROGRESS.md)**（2026-10-20 更新）。
+
 ## 一句话
 
 给独立开发者的自助订阅工具：把 App Store 和 Google Play 的差评收成去重后的 GitHub Issue，减少在两个后台里复制粘贴。
+
+**卖的是「差评 → 可关的 GitHub Issue」工程闭环，不是评论阅读器。**
 
 ## 卖给谁
 
@@ -10,12 +14,12 @@
 
 ## 用户要完成的事
 
-1. 注册（自动 14 天试用）
+1. 注册（自动 14 天试用；建议验证邮箱）
 2. Settings 填 `owner/repo` 和 GitHub Token（Issues 读写）
-3. 本地演示可开 **Use mock store reviews**
-4. Dashboard 点 **Run sync**
-5. 在 GitHub 看到合并后的 Issue
-6. 试用结束后走 Stripe（定价页标价 **$12/月**）
+3. 演示可开 **使用示例商店评价**；正式再关 mock 并填 ASC/Play
+4. Dashboard 点同步 → 在「待修 Issue」打开 GitHub
+5. 修好后在 GitHub 关单，控制台显示已处理
+6. 试用结束后付费（定价页标价 **$12/月**；**收款通道尚未接好**，见 PROGRESS）
 
 ## 和竞品的差别（产品承诺）
 
@@ -25,31 +29,27 @@
 | 开源周报 | 每周一大条摘要，不好直接修 |
 | StoreToIssues | 双端 + 相似投诉合并成一条可修 Issue |
 
-不在范围内：商店回评、ASO、竞品榜单、国内多商店。
+不在范围内：商店回评、ASO、竞品榜单、国内多商店、Gitee（v1）。
 
 ## 计费规则（代码已实现）
 
 | 状态 | 能否同步 |
 |------|----------|
 | `trialing` 且未过期 | 可以 |
-| `active` | 可以 |
+| `active` / `isAdmin` | 可以 |
 | 试用过期 / `canceled` / `none` | 不可以（HTTP 402） |
 
-未配置 `STRIPE_SECRET_KEY` + `STRIPE_PRICE_ID` 时，Checkout 会提示未配置；试用逻辑仍然生效。
+未配置 Stripe（或后续 MoR）时，Checkout 不可用；试用与管理员仍可同步。
 
-## 本地怎么看
+## 线上与本地
 
-服务：http://localhost:3000
+| 环境 | 地址 |
+|------|------|
+| 公网 | https://store-to-issues.vercel.app |
+| 本地 | http://localhost:3000 |
+| 演示 Issue | https://github.com/yipeng7816/store-to-issues-demo/issues |
 
-| 想看什么 | 打开 |
-|----------|------|
-| 对外首页 | http://localhost:3000 |
-| 注册 | http://localhost:3000/register |
-| 控制台 | http://localhost:3000/dashboard |
-| 配置 | http://localhost:3000/settings |
-| 价格 | http://localhost:3000/pricing |
-
-演示仓库（若 Settings 已指向它）：https://github.com/yipeng7816/store-to-issues-demo/issues
+支持邮箱：环境变量 `SUPPORT_EMAIL`（页脚与联系表单）。
 
 ## 验证标准（实验，不是代码功能）
 
@@ -59,6 +59,10 @@
 | 60 天 | 有试用但 0 付费 |
 | 120 天 | 没有第 2 个独立付费用户 |
 
-## 还不在本仓库里的事
+公开部署已完成；**实验计时从你开始对外推广帖之日起算**。
 
-推广帖、域名、Vercel 账号、Stripe 商品、真实商店 API 密钥。步骤见 `DEPLOY.md`。
+## 相关文档
+
+- 进度：`docs/PROGRESS.md`
+- 部署：`docs/DEPLOY-BEGINNER-CN.md`、`DEPLOY.md`
+- 架构：`docs/ARCHITECTURE.md`
