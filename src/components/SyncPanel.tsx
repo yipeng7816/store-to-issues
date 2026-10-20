@@ -1,0 +1,186 @@
+"use client";
+
+import { useCallback, useEffect, useState } from "react";
+import Link from "next/link";
+import { useT } from "../lib/i18n";
+
+type Review = {
+  id: string;
+  store: string;
+  rating: number;
+  title: string | null;
+  body: string;
+  clusterKey: string | null;
+  githubIssue: string | null;
+};
+
+function formatRunMessage(message: string, locale: "zh" | "en") {
+  if (locale !== "zh") return message;
+  return message
+    .replace(/minRating<=(\d+)/, "最低星级≤$1")
+    .replace(/mock=true/, "示例评价")
+    .replace(/mock=false/, "真实商店")
+    .replace(/ios=(\d+)/, "App Store $1")
+    .replace(/play=(\d+)/, "Google Play $1")
+    .replace(/warnings=(\d+)/, "警告 $1");
+}
+
+type SyncRun = {
+  id: string;
+  status: string;
+  fetched: number;
+  createdIssues: number;
+  mergedInto: number;
+  message: string | null;
+  startedAt: string;
+};
+
+export function SyncPanel() {
+  const { t, locale } = useT();
+  const [reviews, setReviews] = useState<Review[]>([]);
+  const [runs, setRuns] = useState<SyncRun[]>([]);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const [lastResult, setLastResult] = useState("");
+  const [unauthorized, setUnauthorized] = useState(false);
+
+  const load = useCallback(async () => {
+    const res = await fetch("/api/reviews", { cache: "no-store" });
+    if (res.status === 401) {
+      setUnauthorized(true);
+      return;
+    }
+    const data = (await res.json()) as { reviews: Review[]; runs: SyncRun[] };
+    setReviews(data.reviews || []);
+    setRuns(data.runs || []);
+  }, []);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  async function syncNow() {
+    setBusy(true);
+    setError("");
+    setLastResult("");
+    try {
+      const res = await fetch("/api/sync", { method: "POST", cache: "no-store" });
+      const data = (await res.json()) as {
+        ok?: boolean;
+        error?: string;
+        fetched?: number;
+        createdIssues?: number;
+        mergedInto?: number;
+        sources?: { app_store?: number; google_play?: number };
+        warnings?: string[];
+      };
+      if (res.status === 401) {
+        setUnauthorized(true);
+        setError(t("pleaseLogin"));
+      } else if (res.status === 402) {
+        setError(t("trialExpired"));
+      } else if (!res.ok || data.ok === false) {
+        setError(data.error || t("syncFail"));
+      } else {
+        const ios = data.sources?.app_store ?? "?";
+        const play = data.sources?.google_play ?? "?";
+        setLastResult(
+          `${t("fetched")} ${data.fetched}（${t("storeIos")} ${ios} / ${t("storePlay")} ${play}），${t("created")} ${data.createdIssues}，${t("merged")} ${data.mergedInto}`,
+        );
+        if (data.warnings?.length) {
+          setError(data.warnings.join(" · "));
+        }
+      }
+      await load();
+    } catch {
+      setError(t("network"));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  if (unauthorized) {
+    return (
+      <div className="rounded-2xl border border-stone-200 bg-white p-6 text-sm text-stone-600">
+        <Link href="/login" className="text-teal-800 underline">
+          {t("pleaseLogin")}
+        </Link>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-8">
+      <div className="flex flex-wrap items-center gap-3">
+        <button
+          type="button"
+          onClick={() => void syncNow()}
+          disabled={busy}
+          className="h-10 rounded-full bg-teal-800 px-4 text-sm font-medium text-white hover:bg-teal-700 disabled:opacity-60"
+        >
+          {busy ? t("syncing") : t("runSync")}
+        </button>
+        <Link href="/settings" className="text-sm text-teal-800 underline">
+          {t("navSettings")}
+        </Link>
+        {lastResult ? (
+          <span className="text-sm text-teal-800">{lastResult}</span>
+        ) : null}
+        {error ? <span className="text-sm text-red-700">{error}</span> : null}
+      </div>
+
+      <section>
+        <h2 className="text-sm font-medium text-stone-800">{t("recentRuns")}</h2>
+        <ul className="mt-3 space-y-2 font-mono text-xs text-stone-500">
+          {runs.length === 0 ? (
+            <li className="rounded-xl border border-dashed border-stone-300 bg-white px-3 py-4 text-stone-500">
+              {t("noRuns")}
+            </li>
+          ) : null}
+          {runs.map((r) => (
+            <li key={r.id} className="rounded-xl border border-stone-200 bg-white px-3 py-2">
+              {r.status === "ok" ? t("statusOk") : r.status} · {t("fetched")}{" "}
+              {r.fetched} · {t("created")} {r.createdIssues} · {t("merged")}{" "}
+              {r.mergedInto}
+              {r.message ? ` · ${formatRunMessage(r.message, locale)}` : ""}
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      <section>
+        <h2 className="text-sm font-medium text-stone-800">{t("storedReviews")}</h2>
+        <ul className="mt-3 space-y-3">
+          {reviews.length === 0 ? (
+            <li className="rounded-xl border border-dashed border-stone-300 bg-white px-3 py-4 text-sm text-stone-500">
+              {t("noReviews")}
+            </li>
+          ) : null}
+          {reviews.map((r) => (
+            <li
+              key={r.id}
+              className="rounded-2xl border border-stone-200 bg-white p-4"
+            >
+              <div className="flex flex-wrap items-center gap-2 text-sm">
+                <span className="text-amber-400">{"★".repeat(r.rating)}</span>
+                <span className="text-stone-900">{r.title || t("noTitle")}</span>
+                <span className="text-xs text-stone-400">
+                  {r.store === "app_store"
+                    ? t("storeIos")
+                    : r.store === "google_play"
+                      ? t("storePlay")
+                      : r.store}
+                </span>
+              </div>
+              <p className="mt-2 text-sm text-stone-600">{r.body}</p>
+              <p className="mt-2 font-mono text-xs text-stone-400">
+                {t("clusterLabel")}: {r.clusterKey || "—"} · {t("issueLabel")}:{" "}
+                {r.githubIssue || "—"}
+              </p>
+            </li>
+          ))}
+        </ul>
+      </section>
+    </div>
+  );
+}

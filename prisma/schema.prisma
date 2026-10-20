@@ -1,0 +1,93 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  // Production / Neon: postgresql. Local SQLite no longer used after this switch.
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model WaitlistEntry {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  createdAt DateTime @default(now())
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Local / owner unlock: bypasses trial and billing gates
+  isAdmin Boolean @default(false)
+
+  // billing: trialing | active | past_due | canceled | none
+  planStatus           String    @default("trialing")
+  trialEndsAt          DateTime?
+  stripeCustomerId     String?
+  stripeSubscriptionId String?
+
+  settings UserSettings?
+  reviews  Review[]
+  syncRuns SyncRun[]
+}
+
+model UserSettings {
+  userId String @id
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  githubToken  String @default("")
+  githubRepo   String @default("")
+  useMockReviews Boolean @default(true)
+  minRating    Int    @default(3)
+
+  // Optional live store credentials (stored locally; encrypt later for production)
+  ascIssuerId    String @default("")
+  ascKeyId       String @default("")
+  ascPrivateKey  String @default("")
+  ascAppId       String @default("")
+  googlePlayPackageName String @default("")
+  googlePlayServiceAccountJson String @default("")
+
+  updatedAt DateTime @updatedAt
+}
+
+model Review {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  store        String
+  externalId   String
+  rating       Int
+  title        String?
+  body         String
+  author       String?
+  version      String?
+  territory    String?
+  reviewedAt   DateTime?
+  clusterKey   String?
+  githubIssue  String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@unique([userId, store, externalId])
+  @@index([userId, clusterKey])
+}
+
+model SyncRun {
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  startedAt     DateTime @default(now())
+  finishedAt    DateTime?
+  status        String
+  fetched       Int      @default(0)
+  createdIssues Int      @default(0)
+  mergedInto    Int      @default(0)
+  message       String?
+
+  @@index([userId, startedAt])
+}
