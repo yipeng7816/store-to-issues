@@ -210,12 +210,29 @@ npx prisma migrate deploy
 
 ## 你现在最小行动清单
 
-今天就能做：
+**已完成（本机）：** Neon 库已建表；代码已 `git commit`；环境变量草稿在本地 `.env.vercel`（勿提交、勿发到聊天）。
 
-1. 推代码到 GitHub  
-2. 注册 Neon + Vercel  
-3. Prisma 改 postgresql，migrate  
-4. 填环境变量并 Deploy  
-5. 用手机流量（或无痕）打开公网地址注册测一次  
+**你需要在浏览器完成（约 10 分钟）：**
 
-收款、国外卡：**先不用管**；等文档里的 14 天实验出现陌生人注册，再开 Creem 类平台。
+### A. GitHub 登录授权（推代码）
+
+1. 打开：https://github.com/login/device  
+2. 登录你的 GitHub（`yipeng7816`）  
+3. 输入一次性代码（终端里 `gh auth login` 显示的那串，例如 `XXXX-XXXX`）  
+4. 授权 GitHub CLI  
+
+完成后告诉我「GitHub 已授权」，我会执行：
+
+```bash
+gh repo create store-to-issues --public --source=. --remote=origin --push
+```
+
+### B. Vercel 部署
+
+1. 打开 https://vercel.com → 用 **GitHub** 登录  
+2. Import 仓库 `store-to-issues`  
+3. Environment Variables：把本机 `.env.vercel` 里每一行贴进去（Production + Preview）  
+4. Deploy  
+5. 部署成功后把真实域名写回 `APP_URL`，再 Redeploy 一次  
+
+收款、国外卡：**先不用管**；等 14 天实验出现陌生人注册，再开 Creem 类平台。
