@@ -100,9 +100,27 @@ function Header() {
 
 function Footer() {
   const { t } = useT();
+  const support = "408722729@qq.com";
   return (
     <footer className="border-t border-stone-200 px-5 py-8 text-center text-xs text-stone-500">
-      {t("footer")}
+      <p>{t("footer")}</p>
+      <p className="mt-2">
+        {t("supportLabel")}{" "}
+        <a href={`mailto:${support}`} className="text-teal-800 underline">
+          {support}
+        </a>
+      </p>
+      <p className="mt-3 flex flex-wrap items-center justify-center gap-3">
+        <Link href="/privacy" className="underline hover:text-stone-800">
+          {t("footerPrivacy")}
+        </Link>
+        <Link href="/terms" className="underline hover:text-stone-800">
+          {t("footerTerms")}
+        </Link>
+        <Link href="/contact" className="underline hover:text-stone-800">
+          {t("footerContact")}
+        </Link>
+      </p>
     </footer>
   );
 }

@@ -22,11 +22,13 @@ export async function GET() {
       id: user.id,
       email: user.email,
       isAdmin: user.isAdmin,
+      emailVerified: Boolean(user.emailVerifiedAt),
       planStatus: access.planStatus,
       trialEndsAt: access.trialEndsAt,
       syncAllowed: access.allowed,
       accessReason: access.reason,
       stripeConfigured: access.stripeConfigured,
+      supportEmail: process.env.SUPPORT_EMAIL || "408722729@qq.com",
     },
   });
 }

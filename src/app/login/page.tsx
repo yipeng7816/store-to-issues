@@ -11,6 +11,11 @@ export default function LoginPage() {
       <h1 className="text-3xl font-semibold tracking-tight">{t("loginTitle")}</h1>
       <AuthForm mode="login" />
       <p className="text-sm text-stone-500">
+        <Link href="/forgot-password" className="font-medium text-teal-800 underline">
+          {t("forgotPassword")}
+        </Link>
+      </p>
+      <p className="text-sm text-stone-500">
         {t("noAccount")}{" "}
         <Link href="/register" className="font-medium text-teal-800 underline">
           {t("navRegister")}

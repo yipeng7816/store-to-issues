@@ -21,6 +21,8 @@ model User {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
+  emailVerifiedAt DateTime?
+
   // Local / owner unlock: bypasses trial and billing gates
   isAdmin Boolean @default(false)
 
@@ -30,9 +32,32 @@ model User {
   stripeCustomerId     String?
   stripeSubscriptionId String?
 
-  settings UserSettings?
-  reviews  Review[]
-  syncRuns SyncRun[]
+  settings    UserSettings?
+  reviews     Review[]
+  syncRuns    SyncRun[]
+  emailTokens EmailToken[]
+}
+
+model EmailToken {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      String // verify | reset
+  token     String   @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
+
+  @@index([userId, type])
+}
+
+model ContactMessage {
+  id        String   @id @default(cuid())
+  email     String
+  name      String   @default("")
+  body      String
+  userId    String?
+  createdAt DateTime @default(now())
 }
 
 model UserSettings {
