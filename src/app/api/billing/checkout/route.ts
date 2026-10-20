@@ -1,5 +1,13 @@
 import { NextResponse } from "next/server";
-import { getStripe, stripeConfigured } from "../../../../lib/billing";
+import {
+  billingConfigured,
+  getStripe,
+  stripeConfigured,
+} from "../../../../lib/billing";
+import {
+  createCreemCheckout,
+  creemConfigured,
+} from "../../../../lib/creem";
 import { prisma } from "../../../../lib/prisma";
 import { requireUserId } from "../../../../lib/session";
 
@@ -9,11 +17,11 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  if (!stripeConfigured()) {
+  if (!billingConfigured()) {
     return NextResponse.json(
       {
         error:
-          "Stripe is not configured. Set STRIPE_SECRET_KEY and STRIPE_PRICE_ID to enable checkout.",
+          "Billing is not configured. Set CREEM_API_KEY and CREEM_PRODUCT_ID (recommended), or Stripe keys.",
       },
       { status: 501 },
     );
@@ -24,15 +32,36 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const stripe = getStripe();
-  if (!stripe) {
-    return NextResponse.json({ error: "Stripe unavailable" }, { status: 501 });
-  }
-
   const origin =
     request.headers.get("origin") ||
     process.env.APP_URL ||
     "http://localhost:3000";
+  const successUrl = `${origin}/dashboard?checkout=success`;
+
+  if (creemConfigured()) {
+    try {
+      const checkout = await createCreemCheckout({
+        productId: process.env.CREEM_PRODUCT_ID!,
+        successUrl,
+        customerEmail: user.email,
+        userId: user.id,
+      });
+      return NextResponse.json({ url: checkout.url, provider: "creem" });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      return NextResponse.json({ error: message }, { status: 502 });
+    }
+  }
+
+  // Stripe fallback (legacy / if Creem not set)
+  if (!stripeConfigured()) {
+    return NextResponse.json({ error: "No billing provider" }, { status: 501 });
+  }
+
+  const stripe = getStripe();
+  if (!stripe) {
+    return NextResponse.json({ error: "Stripe unavailable" }, { status: 501 });
+  }
 
   let customerId = user.stripeCustomerId;
   if (!customerId) {
@@ -51,7 +80,7 @@ export async function POST(request: Request) {
     mode: "subscription",
     customer: customerId,
     line_items: [{ price: process.env.STRIPE_PRICE_ID!, quantity: 1 }],
-    success_url: `${origin}/dashboard?checkout=success`,
+    success_url: successUrl,
     cancel_url: `${origin}/pricing?checkout=cancel`,
     metadata: { userId: user.id },
     subscription_data: {
@@ -59,5 +88,5 @@ export async function POST(request: Request) {
     },
   });
 
-  return NextResponse.json({ url: session.url });
+  return NextResponse.json({ url: session.url, provider: "stripe" });
 }

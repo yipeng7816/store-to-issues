@@ -27,7 +27,8 @@ export async function GET() {
       trialEndsAt: access.trialEndsAt,
       syncAllowed: access.allowed,
       accessReason: access.reason,
-      stripeConfigured: access.stripeConfigured,
+      stripeConfigured: access.billingConfigured,
+      billingConfigured: access.billingConfigured,
       supportEmail: process.env.SUPPORT_EMAIL || "408722729@qq.com",
     },
   });

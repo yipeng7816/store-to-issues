@@ -162,15 +162,32 @@ npx prisma migrate deploy
 
 ---
 
-## 第 6 步：以后要收钱时怎么做（没有国外卡）
+## 第 6 步：接 Creem 收款（没有国外卡）
 
-1. 选 **Creem**（或当时仍支持大陆个人提现支付宝的 MoR），用大陆身份申请店铺。  
-2. 在平台创建 **$12/月** 订阅商品。  
-3. 改本站结账：把现在的 Stripe Checkout 换成该平台的 Checkout 链接 / SDK（一次小改造）。  
-4. Webhook 里把用户 `planStatus` 设为 `active`（逻辑已有，换事件来源即可）。  
-5. 等到最低提现额（常见 $20–$50）提到支付宝。
+代码已接 Creem（Checkout / 客户门户 / Webhook）。你只需在平台建店并填环境变量：
 
-等月收入稳定、愿意付 Atlas/报税成本时，再评估美国公司 + Stripe。
+1. 打开 [Creem](https://www.creem.io/)，用大陆身份申请店铺（支持测试模式）。  
+2. 创建 **$12/月** 订阅商品，复制 **Product ID**（形如 `prod_…`）。  
+3. Developers → API Keys：复制 **API Key**；Webhooks：URL 填  
+   `https://store-to-issues.vercel.app/api/billing/webhook`  
+   勾选至少：`checkout.completed`、`subscription.active`、`subscription.paid`、`subscription.canceled`、`subscription.expired`、`subscription.paused`。  
+   复制 **Webhook Secret**。  
+4. 在 Vercel → Project → Settings → Environment Variables 添加（Production + Preview）：
+
+| 变量 | 说明 |
+|------|------|
+| `CREEM_API_KEY` | API Key |
+| `CREEM_PRODUCT_ID` | 商品 ID |
+| `CREEM_WEBHOOK_SECRET` | Webhook 签名密钥 |
+| `CREEM_TEST_MODE` | 测试阶段设 `true`；正式收款设 `false`（或省略，且用正式 key） |
+
+5. Redeploy（或 `bash scripts/ship.sh`）。  
+6. 登录站点 → 定价页结账，用 Creem 测试卡走通；成功后库里该用户 `planStatus` 应为 `active`。  
+7. 累计到最低提现额后提到支付宝。
+
+本地 `.env` 可同样填写；不要把密钥提交进 Git。
+
+等月收入稳定、愿意付 Atlas/报税成本时，再评估美国公司 + Stripe（代码仍保留 Stripe 备用）。
 
 ---
 

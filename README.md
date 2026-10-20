@@ -13,7 +13,7 @@ Personal Mode B experiment. Do **not** use company Multica.
 | Neon + Vercel production | Done |
 | Mock sync → GitHub Issues | Done / tested |
 | Live ASC / Play APIs | Code only, **not** tested with real keys |
-| Billing for China founder | Stripe blocked; **Creem/MoR not wired yet** |
+| Billing for China founder | **Creem wired** (set `CREEM_*` on Vercel); Stripe optional fallback |
 | Growth posts | Not started |
 
 Full checklist (中文：已做 / 未做 / 功能列表): **[docs/PROGRESS.md](./docs/PROGRESS.md)**
@@ -25,7 +25,7 @@ Full checklist (中文：已做 / 未做 / 功能列表): **[docs/PROGRESS.md](.
 - Per-user Settings (GitHub, ASC, Play) with encrypted secrets
 - Mock or live dual-store sync + fuzzy merge → GitHub Issues
 - Dashboard: sync, review list, **issue work queue** (open/closed + links)
-- 14-day trial + admin bypass; Stripe skeleton (Checkout / Portal / Webhook)
+- 14-day trial + admin bypass; Creem Checkout / Portal / Webhook (Stripe fallback)
 - Privacy / Terms / Contact + support email in footer
 - Daily cron via `vercel.json` → `/api/cron/sync`
 

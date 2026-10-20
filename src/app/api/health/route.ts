@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "../../../lib/prisma";
-import { stripeConfigured } from "../../../lib/billing";
+import { billingConfigured, stripeConfigured } from "../../../lib/billing";
+import { creemConfigured } from "../../../lib/creem";
 
 export async function GET() {
   let db = "ok";
@@ -13,6 +14,8 @@ export async function GET() {
   return NextResponse.json({
     ok: db === "ok",
     db,
+    billing: billingConfigured(),
+    creem: creemConfigured(),
     stripe: stripeConfigured(),
     time: new Date().toISOString(),
   });

@@ -19,7 +19,7 @@
 3. 演示可开 **使用示例商店评价**；正式再关 mock 并填 ASC/Play
 4. Dashboard 点同步 → 在「待修 Issue」打开 GitHub
 5. 修好后在 GitHub 关单，控制台显示已处理
-6. 试用结束后付费（定价页标价 **$12/月**；**收款通道尚未接好**，见 PROGRESS）
+6. 试用结束后付费（定价页 **$12/月**；走 **Creem**；需配置 `CREEM_*`，见 DEPLOY-BEGINNER-CN）
 
 ## 和竞品的差别（产品承诺）
 
@@ -39,7 +39,7 @@
 | `active` / `isAdmin` | 可以 |
 | 试用过期 / `canceled` / `none` | 不可以（HTTP 402） |
 
-未配置 Stripe（或后续 MoR）时，Checkout 不可用；试用与管理员仍可同步。
+未配置 Creem（或 Stripe 备用）时，Checkout 不可用；试用与管理员仍可同步。
 
 ## 线上与本地
 

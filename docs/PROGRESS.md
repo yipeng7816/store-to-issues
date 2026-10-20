@@ -12,7 +12,7 @@
 
 **本地 MVP + 公网部署已完成。**  
 可注册试用、mock 同步出 GitHub Issue、中英界面、联系与法务页、找回密码/邮箱验证（依赖 Resend）。  
-**未完成：** 真实商店 API 实测、可收款（Creem 等）、自定义域名、对外推广。
+**未完成：** 真实商店 API 实测、Creem 密钥填入与实付测试、自定义域名、对外推广。
 
 ---
 
@@ -28,7 +28,7 @@
 | 设置 | 每用户 GitHub / ASC / Play；密钥加密入库；mock 开关、星级阈值 |
 | 同步 | 双端拉取（或 mock）→ 过滤星级 → 模糊合并 → GitHub Issue |
 | 控制台 | 同步按钮、最近同步、评价列表、**待修 Issue 队列**（开/关状态、可点开 GitHub） |
-| 计费骨架 | 14 天试用；`active` / 管理员可同步；Stripe Checkout/Portal/Webhook 代码已有 |
+| 计费 | 14 天试用；**Creem** Checkout/Portal/Webhook 已接（优先）；Stripe 作备用；缺密钥时结账不可用 |
 | 法务与支持 | `/privacy` `/terms` `/contact`；页脚展示支持邮箱 |
 | 定时 | `vercel.json` 每天一次 cron → `/api/cron/sync`（Hobby 限制，非每小时） |
 
@@ -49,7 +49,7 @@
 | 项 | 说明 |
 |----|------|
 | **真实 App Store / Google Play 拉取** | 代码有，**从未用真密钥打通**；关 mock 需填 ASC/Play |
-| **收款** | Stripe 大陆个人难开；未接 Creem/Paddle 等；定价页有，结账会提示未配置 |
+| **收款密钥** | 代码已接 Creem；需在 [creem.io](https://www.creem.io/) 建店、建 $12/月商品，把 `CREEM_*` 填进 Vercel 并测一笔 |
 | **自定义域名** | 仍用 `*.vercel.app` |
 | **Resend 自定义发信域名** | 现用 `onboarding@resend.dev`，仅适合测已验证邮箱；正式给任意用户发信需绑域名 |
 | **推广** | 未发 PH / Reddit / Indie Hackers / SEO |
@@ -67,7 +67,8 @@
 4. 控制台：开始同步 → 差评合并成 Issue →「待修」里点开 GitHub  
 5. 修好后在 GitHub 关 Issue → 控制台显示已处理  
 6. 忘记密码 / 联系我们 / 看隐私与条款  
-7. 试用结束后：需付费能力（**尚未接好收款**）才能继续同步  
+7. 试用结束后：配好 Creem 后可结账升级；未配密钥时只能试用/管理员  
+
 
 ---
 
@@ -113,6 +114,7 @@
 ## 建议的下一刀（非代码强制）
 
 1. 写一篇英文介绍帖，带上公网链接，开始 14 天陌生人注册实验  
-2. 有人试用后再接 Creem（或同类）收款  
+2. 在 Creem 后台建商品 → 填 Vercel `CREEM_*` → 测一笔 → Redeploy  
+
 3. 有自己的 App 后再测真商店 API  
 4. 需要正式群发邮件时，在 Resend 绑定域名  

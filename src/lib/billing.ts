@@ -1,5 +1,6 @@
 import type { User } from "@prisma/client";
 import Stripe from "stripe";
+import { creemConfigured } from "./creem";
 
 export function getStripe(): Stripe | null {
   const key = process.env.STRIPE_SECRET_KEY;
@@ -13,16 +14,23 @@ export function stripeConfigured(): boolean {
   );
 }
 
+/** Prefer Creem (China-friendly MoR); Stripe remains optional fallback. */
+export function billingConfigured(): boolean {
+  return creemConfigured() || stripeConfigured();
+}
+
 export type AccessResult = {
   allowed: boolean;
   reason: string;
   planStatus: string;
   trialEndsAt: Date | null;
+  /** @deprecated use billingConfigured — kept for existing clients */
   stripeConfigured: boolean;
+  billingConfigured: boolean;
 };
 
 export function checkSyncAccess(user: User): AccessResult {
-  const configured = stripeConfigured();
+  const configured = billingConfigured();
   const trialEndsAt = user.trialEndsAt;
   const now = Date.now();
 
@@ -33,6 +41,7 @@ export function checkSyncAccess(user: User): AccessResult {
       planStatus: "active",
       trialEndsAt,
       stripeConfigured: configured,
+      billingConfigured: configured,
     };
   }
 
@@ -43,6 +52,7 @@ export function checkSyncAccess(user: User): AccessResult {
       planStatus: user.planStatus,
       trialEndsAt,
       stripeConfigured: configured,
+      billingConfigured: configured,
     };
   }
 
@@ -54,6 +64,7 @@ export function checkSyncAccess(user: User): AccessResult {
         planStatus: user.planStatus,
         trialEndsAt,
         stripeConfigured: configured,
+        billingConfigured: configured,
       };
     }
     return {
@@ -62,6 +73,7 @@ export function checkSyncAccess(user: User): AccessResult {
       planStatus: "none",
       trialEndsAt,
       stripeConfigured: configured,
+      billingConfigured: configured,
     };
   }
 
@@ -71,6 +83,7 @@ export function checkSyncAccess(user: User): AccessResult {
     planStatus: user.planStatus,
     trialEndsAt,
     stripeConfigured: configured,
+    billingConfigured: configured,
   };
 }
 

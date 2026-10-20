@@ -29,6 +29,7 @@ model User {
   // billing: trialing | active | past_due | canceled | none
   planStatus           String    @default("trialing")
   trialEndsAt          DateTime?
+  // Creem cust_* / sub_* (preferred) or legacy Stripe cus_* / sub_*
   stripeCustomerId     String?
   stripeSubscriptionId String?
 

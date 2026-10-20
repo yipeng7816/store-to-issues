@@ -111,7 +111,9 @@ printf '%s' 'value' | vercel env add NAME preview
 
 改完 env 后必须再 `bash scripts/ship.sh` 或 `vercel --prod --yes`。
 
-相关键：`DATABASE_URL` `SESSION_SECRET` `ENCRYPTION_KEY` `APP_URL` `CRON_SECRET` `GITHUB_*` `RESEND_API_KEY` `EMAIL_FROM` `SUPPORT_EMAIL` `USE_MOCK_REVIEWS`
+相关键：`DATABASE_URL` `SESSION_SECRET` `ENCRYPTION_KEY` `APP_URL` `CRON_SECRET` `GITHUB_*` `RESEND_API_KEY` `EMAIL_FROM` `SUPPORT_EMAIL` `USE_MOCK_REVIEWS`  
+收款（Creem）：`CREEM_API_KEY` `CREEM_PRODUCT_ID` `CREEM_WEBHOOK_SECRET` `CREEM_TEST_MODE`  
+Webhook：`https://store-to-issues.vercel.app/api/billing/webhook`
 
 ## 邮件自测（线上）
 

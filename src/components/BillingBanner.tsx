@@ -10,6 +10,7 @@ type Me = {
   syncAllowed?: boolean;
   accessReason?: string;
   stripeConfigured?: boolean;
+  billingConfigured?: boolean;
   isAdmin?: boolean;
 };
 
@@ -45,6 +46,7 @@ export function BillingBanner() {
 
   if (!me) return null;
 
+  const billingReady = Boolean(me.billingConfigured ?? me.stripeConfigured);
   const trialLabel = me.trialEndsAt
     ? new Date(me.trialEndsAt).toLocaleDateString()
     : null;
@@ -74,7 +76,7 @@ export function BillingBanner() {
           <button
             type="button"
             onClick={() => void go("/api/billing/checkout")}
-            disabled={busy || !me.stripeConfigured}
+            disabled={busy || !billingReady}
             className="h-9 rounded-full bg-teal-800 px-4 text-xs font-medium text-white hover:bg-teal-700 disabled:opacity-50"
           >
             {busy ? t("redirecting") : t("subscribe")}
@@ -82,7 +84,7 @@ export function BillingBanner() {
           <Link href="/pricing" className="text-xs text-teal-800 underline">
             {t("navPricing")}
           </Link>
-          {!me.stripeConfigured ? (
+          {!billingReady ? (
             <span className="text-xs text-amber-800">{t("stripeMissing")}</span>
           ) : null}
         </div>
@@ -91,24 +93,27 @@ export function BillingBanner() {
           <button
             type="button"
             onClick={() => void go("/api/billing/checkout")}
-            disabled={busy}
+            disabled={busy || !billingReady}
             className="h-9 rounded-full bg-teal-800 px-4 text-xs font-medium text-white hover:bg-teal-700 disabled:opacity-60"
           >
-            {t("upgradeNow")}
+            {busy ? t("redirecting") : t("upgradeNow")}
           </button>
           <Link href="/pricing" className="text-xs text-teal-800 underline">
             {t("navPricing")}
           </Link>
+          {!billingReady ? (
+            <span className="text-xs text-amber-800">{t("stripeMissing")}</span>
+          ) : null}
         </div>
       ) : me.planStatus === "active" ? (
         <div className="mt-3">
           <button
             type="button"
             onClick={() => void go("/api/billing/portal")}
-            disabled={busy || !me.stripeConfigured}
+            disabled={busy || !billingReady}
             className="h-9 rounded-full bg-teal-800 px-4 text-xs font-medium text-white hover:bg-teal-700 disabled:opacity-50"
           >
-            {t("manageBilling")}
+            {busy ? t("redirecting") : t("manageBilling")}
           </button>
         </div>
       ) : null}
