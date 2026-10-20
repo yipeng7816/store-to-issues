@@ -4,6 +4,8 @@ import { prisma } from "../../../lib/prisma";
 import { requireUserId } from "../../../lib/session";
 import { runSync } from "../../../lib/sync";
 
+export const dynamic = "force-dynamic";
+
 export async function POST() {
   const userId = await requireUserId();
   if (!userId) {

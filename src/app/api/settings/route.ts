@@ -3,6 +3,8 @@ import { encryptSecret } from "../../../lib/crypto";
 import { prisma } from "../../../lib/prisma";
 import { requireUserId } from "../../../lib/session";
 
+export const dynamic = "force-dynamic";
+
 export async function GET() {
   const userId = await requireUserId();
   if (!userId) {

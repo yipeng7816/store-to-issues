@@ -4,6 +4,8 @@ import { fetchIssueStates } from "../../../lib/github";
 import { prisma } from "../../../lib/prisma";
 import { requireUserId } from "../../../lib/session";
 
+export const dynamic = "force-dynamic";
+
 function parseIssueNumber(raw: string | null | undefined): number | null {
   if (!raw || raw.startsWith("dry-run:")) return null;
   const n = Number(raw);

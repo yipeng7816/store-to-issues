@@ -63,11 +63,43 @@ export function SyncPanel() {
   const [unauthorized, setUnauthorized] = useState(false);
 
   const load = useCallback(async () => {
-    const res = await fetch("/api/reviews", { cache: "no-store" });
+    const res = await fetch("/api/reviews", {
+      cache: "no-store",
+      credentials: "same-origin",
+      headers: { "Cache-Control": "no-cache" },
+    });
     if (res.status === 401) {
+      // Avoid sticky cached 401 while session cookie is valid
+      const meRes = await fetch("/api/auth/me", {
+        cache: "no-store",
+        credentials: "same-origin",
+      });
+      const meData = (await meRes.json()) as { user?: { email?: string } | null };
+      if (meData.user) {
+        const retry = await fetch("/api/reviews", {
+          cache: "no-store",
+          credentials: "same-origin",
+          headers: { "Cache-Control": "no-cache", Pragma: "no-cache" },
+        });
+        if (retry.ok) {
+          const data = (await retry.json()) as {
+            reviews: Review[];
+            runs: SyncRun[];
+            issues?: IssueRow[];
+            githubRepo?: string | null;
+          };
+          setUnauthorized(false);
+          setReviews(data.reviews || []);
+          setRuns(data.runs || []);
+          setIssues(data.issues || []);
+          setGithubRepo(data.githubRepo || null);
+          return;
+        }
+      }
       setUnauthorized(true);
       return;
     }
+    setUnauthorized(false);
     const data = (await res.json()) as {
       reviews: Review[];
       runs: SyncRun[];

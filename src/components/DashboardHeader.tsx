@@ -10,7 +10,7 @@ export function DashboardHeader() {
   const [email, setEmail] = useState<string | null>(null);
 
   useEffect(() => {
-    void fetch("/api/auth/me")
+    void fetch("/api/auth/me", { cache: "no-store", credentials: "same-origin" })
       .then((r) => r.json())
       .then((d: { user?: { email?: string } | null }) => {
         if (!d.user) {

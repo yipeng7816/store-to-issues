@@ -1,9 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
-  cacheComponents: true,
-  partialPrefetching: true,
+  // Session cookies + Cache Components caused sticky 401 on /api/reviews
+  // while /api/auth/me still looked logged-in. Keep caching off for auth apps.
   turbopack: {
     rules: {
       "*.css": {
