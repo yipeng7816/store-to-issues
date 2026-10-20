@@ -10,15 +10,37 @@ export function DashboardHeader() {
   const [email, setEmail] = useState<string | null>(null);
 
   useEffect(() => {
-    void fetch("/api/auth/me", { cache: "no-store", credentials: "same-origin" })
-      .then((r) => r.json())
-      .then((d: { user?: { email?: string } | null }) => {
-        if (!d.user) {
+    let cancelled = false;
+    void (async () => {
+      const res = await fetch("/api/auth/me", {
+        cache: "no-store",
+        credentials: "same-origin",
+      });
+      const d = (await res.json()) as { user?: { email?: string } | null };
+      if (cancelled) return;
+      if (!d.user) {
+        // One retry — cookie can lag a tick after login redirect
+        await new Promise((r) => setTimeout(r, 200));
+        const retry = await fetch("/api/auth/me", {
+          cache: "no-store",
+          credentials: "same-origin",
+        });
+        const again = (await retry.json()) as {
+          user?: { email?: string } | null;
+        };
+        if (cancelled) return;
+        if (!again.user) {
           router.replace("/login");
           return;
         }
-        setEmail(d.user.email || null);
-      });
+        setEmail(again.user.email || null);
+        return;
+      }
+      setEmail(d.user.email || null);
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, [router]);
 
   return (

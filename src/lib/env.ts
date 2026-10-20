@@ -1,5 +1,10 @@
 import { config } from "dotenv";
 import path from "path";
 
-/** Prefer project `.env` over a stale GITHUB_TOKEN in the parent shell. */
-config({ path: path.join(process.cwd(), ".env"), override: true });
+/**
+ * Local only: load `.env` and let it win over a stale shell GITHUB_TOKEN.
+ * On Vercel, never override platform env with a stray file.
+ */
+if (!process.env.VERCEL) {
+  config({ path: path.join(process.cwd(), ".env"), override: true });
+}

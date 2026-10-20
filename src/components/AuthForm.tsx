@@ -1,11 +1,9 @@
 "use client";
 
 import { FormEvent, useState } from "react";
-import { useRouter } from "next/navigation";
 import { useT } from "../lib/i18n";
 
 export function AuthForm({ mode }: { mode: "login" | "register" }) {
-  const router = useRouter();
   const { t } = useT();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -20,6 +18,7 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
       const res = await fetch(`/api/auth/${mode}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
         body: JSON.stringify({ email, password }),
       });
       const data = (await res.json()) as { error?: string };
@@ -27,8 +26,9 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
         setError(data.error || t("failed"));
         return;
       }
-      router.push("/dashboard");
-      router.refresh();
+      // Full navigation so the session cookie is definitely sent on the next page
+      window.location.assign("/dashboard");
+      return;
     } catch {
       setError(t("network"));
     } finally {

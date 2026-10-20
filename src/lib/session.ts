@@ -7,16 +7,19 @@ export type SessionData = {
   email?: string;
 };
 
+const isProd = process.env.NODE_ENV === "production" || process.env.VERCEL === "1";
+
 const sessionOptions: SessionOptions = {
   password:
     process.env.SESSION_SECRET ||
     "store-to-issues-dev-secret-min-32-chars!!",
   cookieName: "sti_session",
   cookieOptions: {
-    secure: process.env.NODE_ENV === "production",
+    secure: isProd,
     httpOnly: true,
     sameSite: "lax",
     path: "/",
+    maxAge: 60 * 60 * 24 * 30,
   },
 };
 
