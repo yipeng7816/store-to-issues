@@ -168,6 +168,21 @@ export async function runSync(userId: string, creds?: SyncCredentials) {
       },
     });
 
+    // Suggest the worst open-linked review for the dashboard summary
+    const linked = await prisma.review.findMany({
+      where: {
+        userId,
+        githubIssue: { not: null },
+        rating: { lte: threshold },
+      },
+      orderBy: [{ rating: "asc" }, { createdAt: "desc" }],
+      take: 20,
+    });
+    const suggest = linked.find((r) => {
+      const n = parseIssueNumber(r.githubIssue);
+      return n !== null && !String(r.githubIssue).startsWith("dry-run:");
+    });
+
     return {
       ok: true as const,
       fetched: fetched.length,
@@ -176,6 +191,13 @@ export async function runSync(userId: string, creds?: SyncCredentials) {
       sources,
       warnings,
       runId: run.id,
+      suggestFix: suggest
+        ? {
+            issue: parseIssueNumber(suggest.githubIssue),
+            title: suggest.title || suggest.clusterKey || "store review",
+            rating: suggest.rating,
+          }
+        : null,
     };
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);

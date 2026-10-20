@@ -14,6 +14,15 @@ type Review = {
   githubIssue: string | null;
 };
 
+type IssueRow = {
+  number: number;
+  title: string;
+  state: "open" | "closed" | "unknown";
+  url: string;
+  ratingMin: number;
+  reviewCount: number;
+};
+
 function formatRunMessage(message: string, locale: "zh" | "en") {
   if (locale !== "zh") return message;
   return message
@@ -39,6 +48,8 @@ export function SyncPanel() {
   const { t, locale } = useT();
   const [reviews, setReviews] = useState<Review[]>([]);
   const [runs, setRuns] = useState<SyncRun[]>([]);
+  const [issues, setIssues] = useState<IssueRow[]>([]);
+  const [githubRepo, setGithubRepo] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [lastResult, setLastResult] = useState("");
@@ -50,14 +61,33 @@ export function SyncPanel() {
       setUnauthorized(true);
       return;
     }
-    const data = (await res.json()) as { reviews: Review[]; runs: SyncRun[] };
+    const data = (await res.json()) as {
+      reviews: Review[];
+      runs: SyncRun[];
+      issues?: IssueRow[];
+      githubRepo?: string | null;
+    };
     setReviews(data.reviews || []);
     setRuns(data.runs || []);
+    setIssues(data.issues || []);
+    setGithubRepo(data.githubRepo || null);
   }, []);
 
   useEffect(() => {
     void load();
   }, [load]);
+
+  function issueHref(num: string | null): string | null {
+    if (!num || num.startsWith("dry-run:")) return null;
+    const n = Number(num);
+    if (!Number.isFinite(n) || n <= 0) return null;
+    const found = issues.find((i) => i.number === n);
+    if (found?.url) return found.url;
+    if (githubRepo?.includes("/")) {
+      return `https://github.com/${githubRepo}/issues/${n}`;
+    }
+    return null;
+  }
 
   async function syncNow() {
     setBusy(true);
@@ -73,6 +103,7 @@ export function SyncPanel() {
         mergedInto?: number;
         sources?: { app_store?: number; google_play?: number };
         warnings?: string[];
+        suggestFix?: { issue: number | null; title: string; rating: number } | null;
       };
       if (res.status === 401) {
         setUnauthorized(true);
@@ -84,9 +115,11 @@ export function SyncPanel() {
       } else {
         const ios = data.sources?.app_store ?? "?";
         const play = data.sources?.google_play ?? "?";
-        setLastResult(
-          `${t("fetched")} ${data.fetched}（${t("storeIos")} ${ios} / ${t("storePlay")} ${play}），${t("created")} ${data.createdIssues}，${t("merged")} ${data.mergedInto}`,
-        );
+        let summary = `${t("syncSummary")}：${t("fetched")} ${data.fetched}（${t("storeIos")} ${ios} / ${t("storePlay")} ${play}），${t("created")} ${data.createdIssues}，${t("merged")} ${data.mergedInto}`;
+        if (data.suggestFix?.issue) {
+          summary += ` · ${t("suggestFix")}：${data.suggestFix.title}（#${data.suggestFix.issue}）`;
+        }
+        setLastResult(summary);
         if (data.warnings?.length) {
           setError(data.warnings.join(" · "));
         }
@@ -130,6 +163,59 @@ export function SyncPanel() {
       </div>
 
       <section>
+        <h2 className="text-sm font-medium text-stone-800">{t("workQueue")}</h2>
+        <ul className="mt-3 space-y-2">
+          {issues.length === 0 ? (
+            <li className="rounded-xl border border-dashed border-stone-300 bg-white px-3 py-4 text-sm text-stone-500">
+              {t("workQueueEmpty")}
+            </li>
+          ) : null}
+          {issues.map((issue) => (
+            <li
+              key={issue.number}
+              className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-stone-200 bg-white px-4 py-3"
+            >
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-2 text-sm">
+                  <span
+                    className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+                      issue.state === "closed"
+                        ? "bg-stone-100 text-stone-600"
+                        : issue.state === "open"
+                          ? "bg-amber-50 text-amber-900"
+                          : "bg-stone-50 text-stone-500"
+                    }`}
+                  >
+                    {issue.state === "closed"
+                      ? t("issueClosed")
+                      : issue.state === "open"
+                        ? t("issueOpen")
+                        : t("issueUnknown")}
+                  </span>
+                  <span className="font-medium text-stone-900">
+                    #{issue.number} {issue.title}
+                  </span>
+                </div>
+                <p className="mt-1 text-xs text-stone-500">
+                  {"★".repeat(issue.ratingMin)} · {issue.reviewCount} {t("reviewCount")}
+                </p>
+              </div>
+              {issue.url ? (
+                <a
+                  href={issue.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="shrink-0 text-sm font-medium text-teal-800 underline"
+                >
+                  {t("openOnGithub")}
+                </a>
+              ) : null}
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      <section>
         <h2 className="text-sm font-medium text-stone-800">{t("recentRuns")}</h2>
         <ul className="mt-3 space-y-2 font-mono text-xs text-stone-500">
           {runs.length === 0 ? (
@@ -156,29 +242,43 @@ export function SyncPanel() {
               {t("noReviews")}
             </li>
           ) : null}
-          {reviews.map((r) => (
-            <li
-              key={r.id}
-              className="rounded-2xl border border-stone-200 bg-white p-4"
-            >
-              <div className="flex flex-wrap items-center gap-2 text-sm">
-                <span className="text-amber-400">{"★".repeat(r.rating)}</span>
-                <span className="text-stone-900">{r.title || t("noTitle")}</span>
-                <span className="text-xs text-stone-400">
-                  {r.store === "app_store"
-                    ? t("storeIos")
-                    : r.store === "google_play"
-                      ? t("storePlay")
-                      : r.store}
-                </span>
-              </div>
-              <p className="mt-2 text-sm text-stone-600">{r.body}</p>
-              <p className="mt-2 font-mono text-xs text-stone-400">
-                {t("clusterLabel")}: {r.clusterKey || "—"} · {t("issueLabel")}:{" "}
-                {r.githubIssue || "—"}
-              </p>
-            </li>
-          ))}
+          {reviews.map((r) => {
+            const href = issueHref(r.githubIssue);
+            return (
+              <li
+                key={r.id}
+                className="rounded-2xl border border-stone-200 bg-white p-4"
+              >
+                <div className="flex flex-wrap items-center gap-2 text-sm">
+                  <span className="text-amber-400">{"★".repeat(r.rating)}</span>
+                  <span className="text-stone-900">{r.title || t("noTitle")}</span>
+                  <span className="text-xs text-stone-400">
+                    {r.store === "app_store"
+                      ? t("storeIos")
+                      : r.store === "google_play"
+                        ? t("storePlay")
+                        : r.store}
+                  </span>
+                </div>
+                <p className="mt-2 text-sm text-stone-600">{r.body}</p>
+                <p className="mt-2 font-mono text-xs text-stone-400">
+                  {t("clusterLabel")}: {r.clusterKey || "—"} · {t("issueLabel")}:{" "}
+                  {href && r.githubIssue ? (
+                    <a
+                      href={href}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-teal-800 underline"
+                    >
+                      #{r.githubIssue}
+                    </a>
+                  ) : (
+                    r.githubIssue || "—"
+                  )}
+                </p>
+              </li>
+            );
+          })}
         </ul>
       </section>
     </div>

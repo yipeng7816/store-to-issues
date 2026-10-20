@@ -50,3 +50,51 @@ export async function createOrCommentIssue(params: {
 
   return { number: issue.data.number, url: issue.data.html_url };
 }
+
+export type IssueStateInfo = {
+  number: number;
+  state: "open" | "closed";
+  title: string;
+  url: string;
+};
+
+/** Resolve open/closed for issue numbers (best-effort; skips dry-run / missing auth). */
+export async function fetchIssueStates(params: {
+  numbers: number[];
+  githubToken?: string;
+  githubRepo?: string;
+}): Promise<Record<number, IssueStateInfo>> {
+  const token = params.githubToken || process.env.GITHUB_TOKEN || "";
+  const repo = params.githubRepo || process.env.GITHUB_REPO || "";
+  const unique = [...new Set(params.numbers.filter((n) => n > 0))];
+  const out: Record<number, IssueStateInfo> = {};
+
+  if (!token || !repo.includes("/") || unique.length === 0) {
+    return out;
+  }
+
+  const [owner, name] = repo.split("/");
+  const octokit = new Octokit({ auth: token });
+
+  await Promise.all(
+    unique.map(async (num) => {
+      try {
+        const { data } = await octokit.rest.issues.get({
+          owner,
+          repo: name,
+          issue_number: num,
+        });
+        out[num] = {
+          number: num,
+          state: data.state === "closed" ? "closed" : "open",
+          title: data.title,
+          url: data.html_url,
+        };
+      } catch {
+        // ignore missing / unauthorized issues
+      }
+    }),
+  );
+
+  return out;
+}
