@@ -12,6 +12,7 @@ type Review = {
   body: string;
   clusterKey: string | null;
   githubIssue: string | null;
+  githubIssueUrl?: string | null;
 };
 
 type IssueRow = {
@@ -44,6 +45,11 @@ type SyncRun = {
   startedAt: string;
 };
 
+function fallbackIssueUrl(repo: string | null, num: number): string {
+  const r = repo?.includes("/") ? repo : "yipeng7816/store-to-issues-demo";
+  return `https://github.com/${r}/issues/${num}`;
+}
+
 export function SyncPanel() {
   const { t, locale } = useT();
   const [reviews, setReviews] = useState<Review[]>([]);
@@ -53,6 +59,7 @@ export function SyncPanel() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [lastResult, setLastResult] = useState("");
+  const [suggestUrl, setSuggestUrl] = useState<string | null>(null);
   const [unauthorized, setUnauthorized] = useState(false);
 
   const load = useCallback(async () => {
@@ -77,22 +84,18 @@ export function SyncPanel() {
     void load();
   }, [load]);
 
-  function issueHref(num: string | null): string | null {
-    if (!num || num.startsWith("dry-run:")) return null;
-    const n = Number(num);
-    if (!Number.isFinite(n) || n <= 0) return null;
-    const found = issues.find((i) => i.number === n);
+  function resolveIssueUrl(num: number, preferred?: string | null): string {
+    if (preferred) return preferred;
+    const found = issues.find((i) => i.number === num);
     if (found?.url) return found.url;
-    if (githubRepo?.includes("/")) {
-      return `https://github.com/${githubRepo}/issues/${n}`;
-    }
-    return null;
+    return fallbackIssueUrl(githubRepo, num);
   }
 
   async function syncNow() {
     setBusy(true);
     setError("");
     setLastResult("");
+    setSuggestUrl(null);
     try {
       const res = await fetch("/api/sync", { method: "POST", cache: "no-store" });
       const data = (await res.json()) as {
@@ -118,6 +121,7 @@ export function SyncPanel() {
         let summary = `${t("syncSummary")}：${t("fetched")} ${data.fetched}（${t("storeIos")} ${ios} / ${t("storePlay")} ${play}），${t("created")} ${data.createdIssues}，${t("merged")} ${data.mergedInto}`;
         if (data.suggestFix?.issue) {
           summary += ` · ${t("suggestFix")}：${data.suggestFix.title}（#${data.suggestFix.issue}）`;
+          setSuggestUrl(fallbackIssueUrl(githubRepo, data.suggestFix.issue));
         }
         setLastResult(summary);
         if (data.warnings?.length) {
@@ -144,22 +148,39 @@ export function SyncPanel() {
 
   return (
     <div className="flex flex-col gap-8">
-      <div className="flex flex-wrap items-center gap-3">
-        <button
-          type="button"
-          onClick={() => void syncNow()}
-          disabled={busy}
-          className="h-10 rounded-full bg-teal-800 px-4 text-sm font-medium text-white hover:bg-teal-700 disabled:opacity-60"
-        >
-          {busy ? t("syncing") : t("runSync")}
-        </button>
-        <Link href="/settings" className="text-sm text-teal-800 underline">
-          {t("navSettings")}
-        </Link>
+      <div className="flex flex-col gap-2">
+        <div className="flex flex-wrap items-center gap-3">
+          <button
+            type="button"
+            onClick={() => void syncNow()}
+            disabled={busy}
+            className="h-10 rounded-full bg-teal-800 px-4 text-sm font-medium text-white hover:bg-teal-700 disabled:opacity-60"
+          >
+            {busy ? t("syncing") : t("runSync")}
+          </button>
+          <Link href="/settings" className="text-sm text-teal-800 underline">
+            {t("navSettings")}
+          </Link>
+        </div>
         {lastResult ? (
-          <span className="text-sm text-teal-800">{lastResult}</span>
+          <p className="text-sm text-teal-800">
+            {lastResult}
+            {suggestUrl ? (
+              <>
+                {" "}
+                <a
+                  href={suggestUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="font-medium underline"
+                >
+                  {t("openOnGithub")}
+                </a>
+              </>
+            ) : null}
+          </p>
         ) : null}
-        {error ? <span className="text-sm text-red-700">{error}</span> : null}
+        {error ? <p className="text-sm text-red-700">{error}</p> : null}
       </div>
 
       <section>
@@ -170,48 +191,49 @@ export function SyncPanel() {
               {t("workQueueEmpty")}
             </li>
           ) : null}
-          {issues.map((issue) => (
-            <li
-              key={issue.number}
-              className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-stone-200 bg-white px-4 py-3"
-            >
-              <div className="min-w-0">
-                <div className="flex flex-wrap items-center gap-2 text-sm">
-                  <span
-                    className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-                      issue.state === "closed"
-                        ? "bg-stone-100 text-stone-600"
-                        : issue.state === "open"
-                          ? "bg-amber-50 text-amber-900"
-                          : "bg-stone-50 text-stone-500"
-                    }`}
-                  >
-                    {issue.state === "closed"
-                      ? t("issueClosed")
-                      : issue.state === "open"
-                        ? t("issueOpen")
-                        : t("issueUnknown")}
-                  </span>
-                  <span className="font-medium text-stone-900">
-                    #{issue.number} {issue.title}
-                  </span>
-                </div>
-                <p className="mt-1 text-xs text-stone-500">
-                  {"★".repeat(issue.ratingMin)} · {issue.reviewCount} {t("reviewCount")}
-                </p>
-              </div>
-              {issue.url ? (
+          {issues.map((issue) => {
+            const href = resolveIssueUrl(issue.number, issue.url);
+            return (
+              <li key={issue.number}>
                 <a
-                  href={issue.url}
+                  href={href}
                   target="_blank"
                   rel="noreferrer"
-                  className="shrink-0 text-sm font-medium text-teal-800 underline"
+                  className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-stone-200 bg-white px-4 py-3 transition hover:border-teal-700 hover:bg-teal-50/40"
                 >
-                  {t("openOnGithub")}
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2 text-sm">
+                      <span
+                        className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+                          issue.state === "closed"
+                            ? "bg-stone-100 text-stone-600"
+                            : issue.state === "open"
+                              ? "bg-amber-50 text-amber-900"
+                              : "bg-stone-50 text-stone-500"
+                        }`}
+                      >
+                        {issue.state === "closed"
+                          ? t("issueClosed")
+                          : issue.state === "open"
+                            ? t("issueOpen")
+                            : t("issueUnknown")}
+                      </span>
+                      <span className="font-medium text-stone-900">
+                        #{issue.number} {issue.title}
+                      </span>
+                    </div>
+                    <p className="mt-1 text-xs text-stone-500">
+                      {"★".repeat(issue.ratingMin)} · {issue.reviewCount}{" "}
+                      {t("reviewCount")}
+                    </p>
+                  </div>
+                  <span className="shrink-0 text-sm font-medium text-teal-800 underline">
+                    {t("openOnGithub")}
+                  </span>
                 </a>
-              ) : null}
-            </li>
-          ))}
+              </li>
+            );
+          })}
         </ul>
       </section>
 
@@ -243,7 +265,14 @@ export function SyncPanel() {
             </li>
           ) : null}
           {reviews.map((r) => {
-            const href = issueHref(r.githubIssue);
+            const num = r.githubIssue && !r.githubIssue.startsWith("dry-run:")
+              ? Number(r.githubIssue)
+              : NaN;
+            const href =
+              r.githubIssueUrl ||
+              (Number.isFinite(num) && num > 0
+                ? resolveIssueUrl(num)
+                : null);
             return (
               <li
                 key={r.id}
@@ -263,12 +292,12 @@ export function SyncPanel() {
                 <p className="mt-2 text-sm text-stone-600">{r.body}</p>
                 <p className="mt-2 font-mono text-xs text-stone-400">
                   {t("clusterLabel")}: {r.clusterKey || "—"} · {t("issueLabel")}:{" "}
-                  {href && r.githubIssue ? (
+                  {href ? (
                     <a
                       href={href}
                       target="_blank"
                       rel="noreferrer"
-                      className="text-teal-800 underline"
+                      className="font-medium text-teal-800 underline"
                     >
                       #{r.githubIssue}
                     </a>

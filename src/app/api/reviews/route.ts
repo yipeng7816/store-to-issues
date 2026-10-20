@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { decryptSecret } from "../../../lib/crypto";
+import { credentialsFromSettings } from "../../../lib/credentials";
 import { fetchIssueStates } from "../../../lib/github";
 import { prisma } from "../../../lib/prisma";
 import { requireUserId } from "../../../lib/session";
@@ -8,6 +8,13 @@ function parseIssueNumber(raw: string | null | undefined): number | null {
   if (!raw || raw.startsWith("dry-run:")) return null;
   const n = Number(raw);
   return Number.isFinite(n) && n > 0 ? n : null;
+}
+
+function issueUrl(repo: string, num: number, fromApi?: string): string {
+  if (fromApi) return fromApi;
+  if (repo.includes("/")) return `https://github.com/${repo}/issues/${num}`;
+  // Last-resort demo repo used in local/prod mock flows
+  return `https://github.com/yipeng7816/store-to-issues-demo/issues/${num}`;
 }
 
 export async function GET() {
@@ -30,11 +37,9 @@ export async function GET() {
     prisma.userSettings.findUnique({ where: { userId } }),
   ]);
 
-  const githubRepo =
-    settings?.githubRepo || process.env.GITHUB_REPO || "";
-  const githubToken = settings?.githubToken
-    ? decryptSecret(settings.githubToken)
-    : process.env.GITHUB_TOKEN || "";
+  const creds = credentialsFromSettings(settings);
+  const githubRepo = creds.githubRepo;
+  const githubToken = creds.githubToken;
 
   const numbers = reviews
     .map((r) => parseIssueNumber(r.githubIssue))
@@ -63,11 +68,7 @@ export async function GET() {
     const num = parseIssueNumber(r.githubIssue);
     if (num === null) continue;
     const info = issueStates[num];
-    const url =
-      info?.url ||
-      (githubRepo.includes("/")
-        ? `https://github.com/${githubRepo}/issues/${num}`
-        : "");
+    const url = issueUrl(githubRepo, num, info?.url);
     const existing = byIssue.get(num);
     if (existing) {
       existing.reviewCount += 1;
@@ -93,8 +94,16 @@ export async function GET() {
     return a.ratingMin - b.ratingMin;
   });
 
+  const reviewsWithLinks = reviews.map((r) => {
+    const num = parseIssueNumber(r.githubIssue);
+    return {
+      ...r,
+      githubIssueUrl: num ? issueUrl(githubRepo, num, issueStates[num]?.url) : null,
+    };
+  });
+
   return NextResponse.json({
-    reviews,
+    reviews: reviewsWithLinks,
     runs,
     githubRepo: githubRepo || null,
     issues,
