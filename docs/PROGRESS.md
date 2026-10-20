@@ -105,6 +105,8 @@
 | `docs/DEPLOY-BEGINNER-CN.md` | 外网部署入门（大陆、无国外卡） |
 | `DEPLOY.md` | 生产清单（英文简版） |
 | `README.md` | 仓库入口 |
+| `.cursor/skills/store-to-issues-ops/` | 发布/查库 Agent Skill |
+| `scripts/ship.sh` / `db-query.mjs` | 一键发布与 SQL |
 
 ---
 
