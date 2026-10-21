@@ -1,7 +1,7 @@
 import { GoogleAuth } from "google-auth-library";
 import type { StoreReview } from "./types";
 import { mockAllReviews } from "./mocks";
-import { fetchWithRetry } from "./rate-limit";
+import { fetchWithRetry, sleep } from "./rate-limit";
 
 type PlayReview = {
   reviewId?: string;
@@ -25,6 +25,27 @@ function serviceAccountCredentials(): Record<string, unknown> | null {
   } catch {
     throw new Error("GOOGLE_PLAY_SERVICE_ACCOUNT_JSON is not valid JSON");
   }
+}
+
+function maxPages(): number {
+  const n = Number(process.env.REVIEW_MAX_PAGES || "10");
+  return Number.isFinite(n) && n > 0 ? Math.min(50, Math.floor(n)) : 10;
+}
+
+function mapPlay(review: PlayReview): StoreReview | null {
+  const comment = review.comments?.[0]?.userComment;
+  if (!review.reviewId || !comment) return null;
+  const seconds = comment.lastModified?.seconds;
+  return {
+    store: "google_play",
+    externalId: review.reviewId,
+    rating: comment.starRating ?? 0,
+    body: comment.text || "",
+    author: review.authorName,
+    version: comment.appVersionName,
+    territory: comment.reviewerLanguage,
+    reviewedAt: seconds ? new Date(Number(seconds) * 1000) : undefined,
+  };
 }
 
 export async function fetchGooglePlayReviews(): Promise<StoreReview[]> {
@@ -56,36 +77,40 @@ export async function fetchGooglePlayReviews(): Promise<StoreReview[]> {
     throw new Error("Failed to obtain Google Play access token");
   }
 
-  const url = new URL(
-    `https://androidpublisher.googleapis.com/androidpublisher/v3/applications/${encodeURIComponent(packageName)}/reviews`,
-  );
-  url.searchParams.set("maxResults", "50");
-
-  const res = await fetchWithRetry(url, {
-    headers: { Authorization: `Bearer ${token.token}` },
-  });
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`Google Play error ${res.status}: ${text}`);
-  }
-
-  const json = (await res.json()) as { reviews?: PlayReview[] };
   const out: StoreReview[] = [];
+  const seen = new Set<string>();
+  let pageToken: string | undefined;
 
-  for (const review of json.reviews || []) {
-    const comment = review.comments?.[0]?.userComment;
-    if (!review.reviewId || !comment) continue;
-    const seconds = comment.lastModified?.seconds;
-    out.push({
-      store: "google_play",
-      externalId: review.reviewId,
-      rating: comment.starRating ?? 0,
-      body: comment.text || "",
-      author: review.authorName,
-      version: comment.appVersionName,
-      territory: comment.reviewerLanguage,
-      reviewedAt: seconds ? new Date(Number(seconds) * 1000) : undefined,
+  for (let page = 0; page < maxPages(); page++) {
+    const url = new URL(
+      `https://androidpublisher.googleapis.com/androidpublisher/v3/applications/${encodeURIComponent(packageName)}/reviews`,
+    );
+    url.searchParams.set("maxResults", "50");
+    if (pageToken) url.searchParams.set("token", pageToken);
+
+    const res = await fetchWithRetry(url, {
+      headers: { Authorization: `Bearer ${token.token}` },
     });
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(`Google Play error ${res.status}: ${text}`);
+    }
+
+    const json = (await res.json()) as {
+      reviews?: PlayReview[];
+      tokenPagination?: { nextPageToken?: string };
+    };
+
+    for (const review of json.reviews || []) {
+      const mapped = mapPlay(review);
+      if (!mapped || seen.has(mapped.externalId)) continue;
+      seen.add(mapped.externalId);
+      out.push(mapped);
+    }
+
+    pageToken = json.tokenPagination?.nextPageToken;
+    if (!pageToken) break;
+    await sleep(200);
   }
 
   return out;

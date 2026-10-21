@@ -45,7 +45,7 @@
 
 | 环境 | 地址 |
 |------|------|
-| 公网 | https://store-to-issues.vercel.app |
+| 公网 | https://store.ypmyjob.fun |
 | 本地 | http://localhost:3000 |
 | 演示 Issue | https://github.com/yipeng7816/store-to-issues-demo/issues |
 
