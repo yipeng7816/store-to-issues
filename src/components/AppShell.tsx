@@ -100,7 +100,7 @@ function Header() {
 
 function Footer() {
   const { t } = useT();
-  const support = "408722729@qq.com";
+  const support = "ymyjobp@163.com";
   return (
     <footer className="border-t border-stone-200 px-5 py-8 text-center text-xs text-stone-500">
       <p>{t("footer")}</p>

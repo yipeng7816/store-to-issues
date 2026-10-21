@@ -4,7 +4,7 @@ import Link from "next/link";
 import { FormEvent, useState } from "react";
 import { useT } from "../../lib/i18n";
 
-const SUPPORT = "408722729@qq.com";
+const SUPPORT = "ymyjobp@163.com";
 
 export default function ContactPage() {
   const { t } = useT();

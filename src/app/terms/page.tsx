@@ -30,7 +30,7 @@ export default function TermsPage() {
               API 故障不承担超出法律强制范围的责任。
             </p>
             <p>
-              <strong>联系：</strong>408722729@qq.com · 联系我们页面。
+              <strong>联系：</strong>ymyjobp@163.com · 联系我们页面。
             </p>
           </>
         ) : (
@@ -55,7 +55,7 @@ export default function TermsPage() {
               outages beyond what applicable law requires.
             </p>
             <p>
-              <strong>Contact:</strong> 408722729@qq.com · Contact page.
+              <strong>Contact:</strong> ymyjobp@163.com · Contact page.
             </p>
           </>
         )}

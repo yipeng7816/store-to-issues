@@ -29,7 +29,7 @@ export async function GET() {
       accessReason: access.reason,
       stripeConfigured: access.billingConfigured,
       billingConfigured: access.billingConfigured,
-      supportEmail: process.env.SUPPORT_EMAIL || "408722729@qq.com",
+      supportEmail: process.env.SUPPORT_EMAIL || "ymyjobp@163.com",
     },
   });
 }

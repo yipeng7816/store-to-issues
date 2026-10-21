@@ -1,7 +1,7 @@
 import "./env";
 
 export function supportEmail(): string {
-  return process.env.SUPPORT_EMAIL || "408722729@qq.com";
+  return process.env.SUPPORT_EMAIL || "ymyjobp@163.com";
 }
 
 export function appBaseUrl(): string {

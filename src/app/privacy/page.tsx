@@ -34,7 +34,7 @@ export default function PrivacyPage() {
               <strong>保留与删除：</strong>账号存续期间保留业务数据。你可来信要求删除账号与相关数据。
             </p>
             <p>
-              <strong>联系：</strong>隐私相关问题请发信至 408722729@qq.com 或使用「联系我们」表单。
+              <strong>联系：</strong>隐私相关问题请发信至 ymyjobp@163.com 或使用「联系我们」表单。
             </p>
           </>
         ) : (
@@ -62,7 +62,7 @@ export default function PrivacyPage() {
               to request deletion of your account and related data.
             </p>
             <p>
-              <strong>Contact:</strong> 408722729@qq.com or the Contact form.
+              <strong>Contact:</strong> ymyjobp@163.com or the Contact form.
             </p>
           </>
         )}
