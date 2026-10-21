@@ -3,93 +3,86 @@
 个人项目。把 **App Store + Google Play 评价** 拉下来，**合并重复投诉**，写成 **GitHub Issue**。
 
 进度见 [PROGRESS.md](./PROGRESS.md)。  
-公网：https://store-to-issues.vercel.app · 本地：http://localhost:3000
+公网：https://store.ypmyjob.fun · 本地：http://localhost:3000
 
 ## 目录
 
 ```text
 store-to-issues/
-├── prisma/schema.prisma     数据模型（生产 Postgres / Neon）
-├── vercel.json              生产每天 cron（Hobby 限制）
-├── DEPLOY.md                上线清单
-├── docs/
-│   ├── PROGRESS.md          进度与功能
-│   ├── ARCHITECTURE.md      本文件
-│   ├── BUSINESS.md          业务说明
-│   └── DEPLOY-BEGINNER-CN.md
+├── prisma/schema.prisma     数据模型（Neon Postgres）
+├── vercel.json              每天 cron（Hobby）
+├── scripts/ship.sh          推送 + Vercel 生产部署
+├── scripts/db-query.mjs     Neon SQL
+├── docs/                    进度 / 业务 / 部署 / 推广
 └── src/
-    ├── app/                 页面与 API（Next.js App Router）
-    ├── components/          客户端表单与面板
-    └── lib/                 同步、商店、GitHub、计费、邮件、加密
+    ├── app/                 页面与 API
+    ├── components/
+    └── lib/                 sync、queue、stores、github、creem、rate-limit…
 ```
 
 ## 页面
 
 | 路径 | 作用 |
 |------|------|
-| `/` | 落地页 + Waitlist（中英） |
+| `/` | 落地 + Waitlist（中英） |
 | `/register` `/login` | 注册 / 登录 |
-| `/forgot-password` `/reset-password` `/verify-email` | 找回密码 / 验证邮箱 |
-| `/dashboard` | 同步、待修 Issue、评价、试用状态 |
-| `/settings` | GitHub / ASC / Play 配置 |
-| `/pricing` | $12/月 + Checkout 入口 |
+| `/forgot-password` `/reset-password` `/verify-email` | 找回 / 验证 / 改邮确认 |
+| `/dashboard` | 同步、待修 Issue、评价、订阅状态 |
+| `/settings` | GitHub / ASC / Play；改密 / 改邮 |
+| `/pricing` | $12/月 + Checkout |
 | `/privacy` `/terms` `/contact` | 法务与联系 |
 
-## API
+## API（摘要）
 
-| 方法 | 路径 | 作用 |
-|------|------|------|
-| POST | `/api/auth/register` `/login` `/logout` | 账号 |
-| GET | `/api/auth/me` | 当前用户与试用/订阅/验证状态 |
-| POST | `/api/auth/forgot-password` `/reset-password` `/verify-email` | 邮件相关 |
-| GET/PUT | `/api/settings` | 每用户配置（密钥加密后入库） |
-| POST | `/api/sync` | 登录且试用/付费/管理员有效时同步 |
-| GET | `/api/reviews` | 评价、同步记录、Issue 队列与开关状态 |
-| POST | `/api/contact` | 联系表单（入库 + 邮件支持邮箱） |
-| POST | `/api/billing/checkout` | Stripe 订阅（需配置密钥） |
-| POST | `/api/billing/portal` | Stripe 客户门户 |
-| POST | `/api/billing/webhook` | Stripe 回调 |
-| GET/POST | `/api/cron/sync` | 定时同步（生产需 `CRON_SECRET`） |
-| POST | `/api/waitlist` | 落地页邮箱 |
-| GET | `/api/health` | 健康检查 |
+| 路径 | 作用 |
+|------|------|
+| `/api/auth/*` | 注册登录、改密、改邮、验证、重置 |
+| `/api/settings` | 每用户配置（密钥加密） |
+| `/api/sync` | 入队并立即执行 `SyncJob`（402 未订阅） |
+| `/api/reviews` | 评价、SyncRun、Issue 开闭状态 |
+| `/api/billing/checkout\|portal\|webhook` | **Creem 优先**；Stripe 备用 |
+| `/api/cron/sync` | 日更：入队 eligible 用户再消化 |
+| `/api/health` | db / billing / creem / stripe |
+| `/api/contact` `/api/waitlist` | 联系与候补 |
 
 ## 同步流水线
 
 ```text
-登录用户
-  → 读 UserSettings，解密密钥
-  → 拉 App Store + Google Play（或 mock）
+登录用户（试用 / active / admin）
+  → enqueue SyncJob（同用户 running 则 409）
+  → 读 UserSettings，解密密钥 → applyCredentialsEnv
+  → 拉 ASC + Play（或 mock；可翻页，REVIEW_MAX_PAGES）
+  → 429/5xx：fetchWithRetry / withRetry
   → 星级 ≤ minRating 才建 Issue
-  → clusterKey 重叠 ≥ 50% 则评论到同一 Issue
-  → GitHub Issues API
-  → 写入 Review / SyncRun（按 userId）
-  → 控制台拉取 Issue open/closed 状态
+  → clusterKey 重叠 ≥ 50% → 同一 Issue 评论
+  → GitHub（写间隔 + 状态查询并发上限）
+  → Review / SyncRun / SyncJob 收尾
 ```
 
-核心文件：`src/lib/sync.ts`、`stores.ts`、`cluster.ts`、`github.ts`、`apple.ts`、`google-play.ts`、`email.ts`。
+核心：`sync.ts`、`sync-queue.ts`、`rate-limit.ts`、`stores.ts`、`apple.ts`、`google-play.ts`、`github.ts`、`creem.ts`。
 
 ## 数据模型（Prisma）
 
 | 表 | 内容 |
 |----|------|
-| `User` | 邮箱、密码哈希、`emailVerifiedAt`、`isAdmin`、`planStatus`、试用与 Stripe id |
-| `UserSettings` | GitHub / ASC / Play；敏感字段加密 |
-| `Review` | 评价原文、聚类键、对应 Issue 号 |
-| `SyncRun` | 每次同步结果 |
-| `EmailToken` | 验证 / 重置密码令牌（哈希存储） |
-| `ContactMessage` | 联系表单 |
-| `WaitlistEntry` | 落地页邮箱 |
-
-生产：Neon Postgres（`DATABASE_URL`）。本地亦可连同一 Neon。
+| `User` | 邮箱、密码、`emailVerifiedAt`、`isAdmin`、`planStatus`、试用；`stripeCustomerId` 兼存 Creem `cust_*` |
+| `UserSettings` | GitHub / ASC / Play |
+| `Review` | 评价、聚类键、Issue 号 |
+| `SyncRun` | 每次同步摘要 |
+| `SyncJob` | pending/running/ok/error；manual \| cron |
+| `EmailToken` | verify \| reset \| email_change（`payload`=新邮箱） |
+| `ContactMessage` / `WaitlistEntry` | 联系与候补 |
 
 ## 安全
 
-- 会话：`iron-session` cookie（`SESSION_SECRET`）
-- 密钥：`src/lib/crypto.ts` AES-256-GCM（`ENCRYPTION_KEY`）
-- 邮件：Resend（`RESEND_API_KEY`）；支持邮箱 `SUPPORT_EMAIL`
-- 生产 cron：`Authorization: Bearer CRON_SECRET`
-- 认证相关 API：`dynamic = force-dynamic`，避免会话被错误缓存
+- 会话：`iron-session`（`SESSION_SECRET`）
+- 密钥：AES-256-GCM（`ENCRYPTION_KEY`）
+- 邮件：Resend；支持邮箱 `SUPPORT_EMAIL`
+- Cron：`Bearer CRON_SECRET`
+- 认证 API：`force-dynamic`
 
-## 计费注意
+## 计费
 
-大陆个人通常无法直接开 Stripe。代码保留 Stripe 骨架；上线收款优先评估 Creem 等 MoR（见 DEPLOY-BEGINNER-CN）。
+- **生产：Creem MoR**（中国个人可开；Live 已审过）
+- Webhook：`creem-signature` HMAC；事件开通/取消 → `planStatus`
+- Stripe 代码保留作备用；未配 Creem 时若有 Stripe 密钥可走 Stripe

@@ -1,6 +1,6 @@
 # StoreToIssues 业务说明
 
-进度与功能清单见 **[PROGRESS.md](./PROGRESS.md)**（2026-10-20 更新）。
+进度与功能清单见 **[PROGRESS.md](./PROGRESS.md)**（2026-10-21 更新）。
 
 ## 一句话
 
@@ -19,7 +19,7 @@
 3. 演示可开 **使用示例商店评价**；正式再关 mock 并填 ASC/Play
 4. Dashboard 点同步 → 在「待修 Issue」打开 GitHub
 5. 修好后在 GitHub 关单，控制台显示已处理
-6. 试用结束后付费（定价页 **$12/月**；走 **Creem**；需配置 `CREEM_*`，见 DEPLOY-BEGINNER-CN）
+6. 试用结束后付费（定价页 **$12/月**；**Creem Live 已开通**；Payout 提现见 OWNER-CHECKLIST）
 
 ## 和竞品的差别（产品承诺）
 
@@ -49,7 +49,7 @@
 | 本地 | http://localhost:3000 |
 | 演示 Issue | https://github.com/yipeng7816/store-to-issues-demo/issues |
 
-支持邮箱：环境变量 `SUPPORT_EMAIL`（页脚与联系表单）。
+支持邮箱：`ymyjobp@163.com`（环境变量 `SUPPORT_EMAIL`）。
 
 ## 验证标准（实验，不是代码功能）
 
