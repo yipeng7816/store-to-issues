@@ -9,6 +9,7 @@ function VerifyInner() {
   const { t } = useT();
   const params = useSearchParams();
   const token = params.get("token") || "";
+  const type = params.get("type") || "verify";
   const [status, setStatus] = useState<"loading" | "ok" | "fail">("loading");
   const [devLink, setDevLink] = useState("");
 
@@ -20,13 +21,13 @@ function VerifyInner() {
     void fetch("/api/auth/verify-email", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ token }),
+      body: JSON.stringify({ token, type }),
     })
       .then(async (res) => {
         setStatus(res.ok ? "ok" : "fail");
       })
       .catch(() => setStatus("fail"));
-  }, [token]);
+  }, [token, type]);
 
   async function resend() {
     const res = await fetch("/api/auth/verify-email", {

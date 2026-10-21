@@ -1,12 +1,14 @@
 import { NextResponse } from "next/server";
 import { prisma } from "../../../../lib/prisma";
-import { sleep } from "../../../../lib/rate-limit";
-import { runSync } from "../../../../lib/sync";
+import { processCronQueue } from "../../../../lib/sync-queue";
 
 /**
  * Daily cron (see vercel.json).
- * Auth: Authorization Bearer CRON_SECRET, or Vercel Cron when CRON_SECRET is set.
+ * Enqueues eligible users into SyncJob then processes with spacing / rate limits.
  */
+export const dynamic = "force-dynamic";
+export const maxDuration = 60;
+
 export async function POST(request: Request) {
   const secret = process.env.CRON_SECRET;
   if (secret) {
@@ -38,15 +40,17 @@ export async function POST(request: Request) {
     select: { userId: true },
   });
 
-  const results = [];
-  for (let i = 0; i < users.length; i++) {
-    const u = users[i];
-    results.push({ userId: u.userId, ...(await runSync(u.userId)) });
-    // Space users so shared provider quotas recover between accounts
-    if (i < users.length - 1) await sleep(500);
-  }
+  const results = await processCronQueue(
+    users.map((u) => u.userId),
+    Number(process.env.CRON_SYNC_LIMIT || "20"),
+  );
 
-  return NextResponse.json({ ok: true, count: results.length, results });
+  return NextResponse.json({
+    ok: true,
+    enqueued: users.length,
+    processed: results.length,
+    results,
+  });
 }
 
 export async function GET(request: Request) {

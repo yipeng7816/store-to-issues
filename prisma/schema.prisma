@@ -36,6 +36,7 @@ model User {
   settings    UserSettings?
   reviews     Review[]
   syncRuns    SyncRun[]
+  syncJobs    SyncJob[]
   emailTokens EmailToken[]
 }
 
@@ -43,13 +44,32 @@ model EmailToken {
   id        String   @id @default(cuid())
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  type      String // verify | reset
+  type      String // verify | reset | email_change
   token     String   @unique
+  /// For email_change: the pending new email address
+  payload   String?
   expiresAt DateTime
   usedAt    DateTime?
   createdAt DateTime @default(now())
 
   @@index([userId, type])
+}
+
+model SyncJob {
+  id         String    @id @default(cuid())
+  userId     String
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// pending | running | ok | error
+  status     String    @default("pending")
+  /// manual | cron
+  source     String    @default("manual")
+  createdAt  DateTime  @default(now())
+  startedAt  DateTime?
+  finishedAt DateTime?
+  message    String?
+
+  @@index([status, createdAt])
+  @@index([userId, status])
 }
 
 model ContactMessage {

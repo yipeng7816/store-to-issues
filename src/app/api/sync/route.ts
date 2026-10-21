@@ -2,9 +2,10 @@ import { NextResponse } from "next/server";
 import { checkSyncAccess } from "../../../lib/billing";
 import { prisma } from "../../../lib/prisma";
 import { requireUserId } from "../../../lib/session";
-import { runSync } from "../../../lib/sync";
+import { enqueueAndRun } from "../../../lib/sync-queue";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 60;
 
 export async function POST() {
   const userId = await requireUserId();
@@ -30,9 +31,10 @@ export async function POST() {
     );
   }
 
-  const result = await runSync(userId);
+  const result = await enqueueAndRun(userId);
   if (!result.ok) {
-    return NextResponse.json(result, { status: 500 });
+    const status = result.error?.includes("already running") ? 409 : 500;
+    return NextResponse.json(result, { status });
   }
   return NextResponse.json(result);
 }
