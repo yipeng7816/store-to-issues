@@ -39,6 +39,20 @@ export async function POST(request: Request) {
   const successUrl = `${origin}/dashboard?checkout=success`;
 
   if (creemConfigured()) {
+    const key = process.env.CREEM_API_KEY || "";
+    if (
+      process.env.CREEM_TEST_MODE === "true" &&
+      key.startsWith("creem_") &&
+      !key.startsWith("creem_test_")
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            "Creem Test Mode needs a test API key (starts with creem_test_). Turn on Test Mode in Creem sidebar → API Keys → copy that key into CREEM_API_KEY.",
+        },
+        { status: 501 },
+      );
+    }
     try {
       const checkout = await createCreemCheckout({
         productId: process.env.CREEM_PRODUCT_ID!,

@@ -10,12 +10,20 @@ export function creemWebhookConfigured(): boolean {
   return Boolean(process.env.CREEM_API_KEY && process.env.CREEM_WEBHOOK_SECRET);
 }
 
+/** Prefer key prefix (Creem keys are not interchangeable across environments). */
 export function creemApiBase(): string {
+  const key = process.env.CREEM_API_KEY || "";
+  if (key.startsWith("creem_test_")) return "https://test-api.creem.io";
+  if (key.startsWith("creem_")) return "https://api.creem.io";
+  // Fallback when key missing / unknown shape
   const test =
     process.env.CREEM_TEST_MODE === "true" ||
-    process.env.CREEM_TEST_MODE === "1" ||
-    process.env.CREEM_API_KEY?.startsWith("creem_test_");
+    process.env.CREEM_TEST_MODE === "1";
   return test ? "https://test-api.creem.io" : "https://api.creem.io";
+}
+
+export function creemKeyLooksLikeTest(): boolean {
+  return (process.env.CREEM_API_KEY || "").startsWith("creem_test_");
 }
 
 type CreemCheckout = {
