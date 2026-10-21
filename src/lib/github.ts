@@ -1,5 +1,6 @@
 import "./env";
 import { Octokit } from "octokit";
+import { mapPool, sleep, withRetry } from "./rate-limit";
 
 export type IssueResult = {
   number: number;
@@ -28,25 +29,32 @@ export async function createOrCommentIssue(params: {
   const octokit = new Octokit({ auth: token });
 
   if (params.existingIssueNumber) {
-    await octokit.rest.issues.createComment({
-      owner,
-      repo: name,
-      issue_number: params.existingIssueNumber,
-      body: params.body,
-    });
+    await withRetry(() =>
+      octokit.rest.issues.createComment({
+        owner,
+        repo: name,
+        issue_number: params.existingIssueNumber!,
+        body: params.body,
+      }),
+    );
+    // Space writes slightly to reduce secondary rate limits
+    await sleep(150);
     return {
       number: params.existingIssueNumber,
       url: `https://github.com/${owner}/${name}/issues/${params.existingIssueNumber}`,
     };
   }
 
-  const issue = await octokit.rest.issues.create({
-    owner,
-    repo: name,
-    title: params.title,
-    body: params.body,
-    labels: ["store-review"],
-  });
+  const issue = await withRetry(() =>
+    octokit.rest.issues.create({
+      owner,
+      repo: name,
+      title: params.title,
+      body: params.body,
+      labels: ["store-review"],
+    }),
+  );
+  await sleep(150);
 
   return { number: issue.data.number, url: issue.data.html_url };
 }
@@ -76,25 +84,26 @@ export async function fetchIssueStates(params: {
   const [owner, name] = repo.split("/");
   const octokit = new Octokit({ auth: token });
 
-  await Promise.all(
-    unique.map(async (num) => {
-      try {
-        const { data } = await octokit.rest.issues.get({
+  // Cap concurrency — unbounded Promise.all was easy to trip secondary limits
+  await mapPool(unique, 4, async (num) => {
+    try {
+      const { data } = await withRetry(() =>
+        octokit.rest.issues.get({
           owner,
           repo: name,
           issue_number: num,
-        });
-        out[num] = {
-          number: num,
-          state: data.state === "closed" ? "closed" : "open",
-          title: data.title,
-          url: data.html_url,
-        };
-      } catch {
-        // ignore missing / unauthorized issues
-      }
-    }),
-  );
+        }),
+      );
+      out[num] = {
+        number: num,
+        state: data.state === "closed" ? "closed" : "open",
+        title: data.title,
+        url: data.html_url,
+      };
+    } catch {
+      // ignore missing / unauthorized issues
+    }
+  });
 
   return out;
 }

@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
 import { prisma } from "../../../../lib/prisma";
+import { sleep } from "../../../../lib/rate-limit";
 import { runSync } from "../../../../lib/sync";
 
 /**
- * Hourly cron (see vercel.json).
+ * Daily cron (see vercel.json).
  * Auth: Authorization Bearer CRON_SECRET, or Vercel Cron when CRON_SECRET is set.
  */
 export async function POST(request: Request) {
@@ -38,8 +39,11 @@ export async function POST(request: Request) {
   });
 
   const results = [];
-  for (const u of users) {
+  for (let i = 0; i < users.length; i++) {
+    const u = users[i];
     results.push({ userId: u.userId, ...(await runSync(u.userId)) });
+    // Space users so shared provider quotas recover between accounts
+    if (i < users.length - 1) await sleep(500);
   }
 
   return NextResponse.json({ ok: true, count: results.length, results });

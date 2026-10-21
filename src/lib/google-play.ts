@@ -1,6 +1,7 @@
 import { GoogleAuth } from "google-auth-library";
 import type { StoreReview } from "./types";
 import { mockAllReviews } from "./mocks";
+import { fetchWithRetry } from "./rate-limit";
 
 type PlayReview = {
   reviewId?: string;
@@ -60,7 +61,7 @@ export async function fetchGooglePlayReviews(): Promise<StoreReview[]> {
   );
   url.searchParams.set("maxResults", "50");
 
-  const res = await fetch(url, {
+  const res = await fetchWithRetry(url, {
     headers: { Authorization: `Bearer ${token.token}` },
   });
   if (!res.ok) {

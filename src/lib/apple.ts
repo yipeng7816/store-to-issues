@@ -1,6 +1,7 @@
 import { SignJWT, importPKCS8 } from "jose";
 import type { StoreReview } from "./types";
 import { mockAllReviews } from "./mocks";
+import { fetchWithRetry } from "./rate-limit";
 
 async function appleToken(): Promise<string> {
   const issuerId = process.env.ASC_ISSUER_ID;
@@ -37,7 +38,7 @@ export async function fetchAppStoreReviews(): Promise<StoreReview[]> {
   url.searchParams.set("sort", "-createdDate");
   url.searchParams.set("limit", "50");
 
-  const res = await fetch(url, {
+  const res = await fetchWithRetry(url, {
     headers: { Authorization: `Bearer ${token}` },
   });
   if (!res.ok) {
