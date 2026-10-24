@@ -1,6 +1,6 @@
 import "./env";
 import { prisma } from "./prisma";
-import { clusterKey } from "./cluster";
+import { clusterKey, overlapScore } from "./cluster";
 import { createOrCommentIssue } from "./github";
 import { fetchAllStoreReviews } from "./stores";
 import {
@@ -8,19 +8,6 @@ import {
   credentialsFromSettings,
   type SyncCredentials,
 } from "./credentials";
-
-function tokenSet(key: string): Set<string> {
-  return new Set(key.split("|").filter(Boolean));
-}
-
-function overlapScore(a: string, b: string): number {
-  const sa = tokenSet(a);
-  const sb = tokenSet(b);
-  let hit = 0;
-  for (const t of sa) if (sb.has(t)) hit += 1;
-  const denom = Math.min(sa.size, sb.size) || 1;
-  return hit / denom;
-}
 
 async function findSiblingIssue(userId: string, key: string) {
   const candidates = await prisma.review.findMany({
