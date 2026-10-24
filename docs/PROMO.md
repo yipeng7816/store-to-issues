@@ -5,7 +5,7 @@ Price: $12/mo · 14-day trial
 
 **Experiment clock:** when you publish the first stranger-facing post, write the date into `docs/BUSINESS.md` → `EXPERIMENT_START`.
 
-**Launch console:** multi-channel login + post tracking lives in sibling repo [`promo-hub`](../../promo-hub) (`npm run dev` → http://127.0.0.1:3199).
+**Launch console:** multi-channel login + post tracking in [promo-hub](https://github.com/yipeng7816/promo-hub) (`npm run dev` → http://127.0.0.1:3199).
 
 ---
 
