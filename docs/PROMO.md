@@ -7,6 +7,8 @@ Price: $12/mo · 14-day trial
 
 **Launch console:** multi-channel login + post tracking in [promo-hub](https://github.com/yipeng7816/promo-hub) (`npm run dev` → http://127.0.0.1:3199).
 
+**Screenshots (EN, full page):** `docs/promo/assets/` — regenerate via [docs/promo/README.md](./promo/README.md).
+
 ---
 
 ## Short pitch (1 sentence)
