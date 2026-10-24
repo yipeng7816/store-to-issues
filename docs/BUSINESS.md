@@ -1,6 +1,6 @@
 # StoreToIssues 业务说明
 
-进度与功能清单见 **[PROGRESS.md](./PROGRESS.md)**（2026-10-21 更新）。
+进度与功能清单见 **[PROGRESS.md](./PROGRESS.md)**（2026-10-24 更新）。
 
 ## 一句话
 
@@ -19,7 +19,7 @@
 3. 演示可开 **使用示例商店评价**；正式再关 mock 并填 ASC/Play
 4. Dashboard 点同步 → 在「待修 Issue」打开 GitHub
 5. 修好后在 GitHub 关单，控制台显示已处理
-6. 试用结束后付费（定价页 **$12/月**；**Creem Live 已开通**；Payout 提现见 OWNER-CHECKLIST）
+6. 试用结束后付费（定价页 **$12/月**；**Creem Live + Payout 已配置**；首笔真付已验）
 
 ## 和竞品的差别（产品承诺）
 
@@ -61,7 +61,7 @@
 | 60 天 | 有试用但 0 付费 |
 | 120 天 | 没有第 2 个独立付费用户 |
 
-公开部署 + 域名 + Creem Live 已完成；**实验计时从 `EXPERIMENT_START` 起算**。推广文案见 [PROMO.md](./PROMO.md)。
+公开部署 + 域名 + Creem 收款/提现 + Resend 发信域已完成；**实验计时从 `EXPERIMENT_START` 起算**（尚未发帖）。推广文案见 [PROMO.md](./PROMO.md)。
 
 ## 相关文档
 

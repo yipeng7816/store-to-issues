@@ -5,13 +5,14 @@ Personal Mode B experiment. Do **not** use company Multica.
 
 **Live:** https://store.ypmyjob.fun  
 
-## Status (2026-10-21)
+## Status (2026-10-24)
 
 | | |
 |--|--|
 | Neon + Vercel + custom domain | Done (`store.ypmyjob.fun`) |
 | Mock sync → GitHub Issues | Done / tested |
-| Creem Live payments | **Approved**; configure Payout to withdraw |
+| Creem Live + Payout + first paid sub | Done (Alipay payout; live checkout tested) |
+| Resend `mail.ypmyjob.fun` | Verified; prod transactional email |
 | Live ASC / Play APIs | Code + paging/retries; **not** tested with real keys |
 | SyncJob queue + rate limits | Done |
 | Growth / experiment clock | Not started — see `docs/PROMO.md` |
