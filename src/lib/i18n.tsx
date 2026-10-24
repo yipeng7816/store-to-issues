@@ -357,13 +357,14 @@ const LocaleContext = createContext<{
   t: (key: CopyKey) => string;
 } | null>(null);
 
-export function LocaleProvider({ children }: { children: React.ReactNode }) {
-  const [locale, setLocaleState] = useState<Locale>("zh");
+function readStoredLocale(): Locale {
+  if (typeof window === "undefined") return "zh";
+  const saved = localStorage.getItem("sti-locale");
+  return saved === "en" || saved === "zh" ? saved : "zh";
+}
 
-  useEffect(() => {
-    const saved = localStorage.getItem("sti-locale");
-    if (saved === "en" || saved === "zh") setLocaleState(saved);
-  }, []);
+export function LocaleProvider({ children }: { children: React.ReactNode }) {
+  const [locale, setLocaleState] = useState<Locale>(readStoredLocale);
 
   useEffect(() => {
     document.documentElement.lang = locale === "zh" ? "zh-CN" : "en";

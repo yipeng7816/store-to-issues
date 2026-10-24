@@ -1,8 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { useT } from "../lib/i18n";
+import { useT, type CopyKey } from "../lib/i18n";
 
 type Review = {
   id: string;
@@ -35,6 +35,35 @@ function formatRunMessage(message: string, locale: "zh" | "en") {
     .replace(/warnings=(\d+)/, "警告 $1");
 }
 
+type LastSyncResult = {
+  fetched: number;
+  createdIssues: number;
+  mergedInto: number;
+  ios: number | string;
+  play: number | string;
+  suggestFix?: { issue: number; title: string } | null;
+};
+
+function formatSyncSummary(
+  data: LastSyncResult,
+  locale: "zh" | "en",
+  t: (key: CopyKey) => string,
+): string {
+  const { ios, play } = data;
+  if (locale === "zh") {
+    let summary = `${t("syncSummary")}：${t("fetched")} ${data.fetched}（${t("storeIos")} ${ios} / ${t("storePlay")} ${play}），${t("created")} ${data.createdIssues}，${t("merged")} ${data.mergedInto}`;
+    if (data.suggestFix?.issue) {
+      summary += ` · ${t("suggestFix")}：${data.suggestFix.title}（#${data.suggestFix.issue}）`;
+    }
+    return summary;
+  }
+  let summary = `${t("syncSummary")}: ${t("fetched")} ${data.fetched} (${t("storeIos")} ${ios} / ${t("storePlay")} ${play}), ${t("created")} ${data.createdIssues}, ${t("merged")} ${data.mergedInto}`;
+  if (data.suggestFix?.issue) {
+    summary += ` · ${t("suggestFix")}: ${data.suggestFix.title} (#${data.suggestFix.issue})`;
+  }
+  return summary;
+}
+
 type SyncRun = {
   id: string;
   status: string;
@@ -58,8 +87,13 @@ export function SyncPanel() {
   const [githubRepo, setGithubRepo] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
-  const [lastResult, setLastResult] = useState("");
+  const [lastSync, setLastSync] = useState<LastSyncResult | null>(null);
   const [suggestUrl, setSuggestUrl] = useState<string | null>(null);
+
+  const lastResult = useMemo(
+    () => (lastSync ? formatSyncSummary(lastSync, locale, t) : ""),
+    [lastSync, locale, t],
+  );
   const [unauthorized, setUnauthorized] = useState(false);
 
   const load = useCallback(async () => {
@@ -126,7 +160,7 @@ export function SyncPanel() {
   async function syncNow() {
     setBusy(true);
     setError("");
-    setLastResult("");
+    setLastSync(null);
     setSuggestUrl(null);
     try {
       const res = await fetch("/api/sync", { method: "POST", cache: "no-store" });
@@ -150,12 +184,21 @@ export function SyncPanel() {
       } else {
         const ios = data.sources?.app_store ?? "?";
         const play = data.sources?.google_play ?? "?";
-        let summary = `${t("syncSummary")}：${t("fetched")} ${data.fetched}（${t("storeIos")} ${ios} / ${t("storePlay")} ${play}），${t("created")} ${data.createdIssues}，${t("merged")} ${data.mergedInto}`;
-        if (data.suggestFix?.issue) {
-          summary += ` · ${t("suggestFix")}：${data.suggestFix.title}（#${data.suggestFix.issue}）`;
-          setSuggestUrl(fallbackIssueUrl(githubRepo, data.suggestFix.issue));
+        const suggestIssue = data.suggestFix?.issue;
+        setLastSync({
+          fetched: data.fetched ?? 0,
+          createdIssues: data.createdIssues ?? 0,
+          mergedInto: data.mergedInto ?? 0,
+          ios,
+          play,
+          suggestFix:
+            suggestIssue && data.suggestFix
+              ? { issue: suggestIssue, title: data.suggestFix.title }
+              : null,
+        });
+        if (suggestIssue) {
+          setSuggestUrl(fallbackIssueUrl(githubRepo, suggestIssue));
         }
-        setLastResult(summary);
         if (data.warnings?.length) {
           setError(data.warnings.join(" · "));
         }
