@@ -17,6 +17,12 @@ vi.mock("../../../../lib/session", () => ({
   getSession: async () => session,
 }));
 
+vi.mock("../../../../lib/request-limit", () => ({
+  allowRequest: async () => true,
+  clientIp: () => "127.0.0.1",
+  tooManyAttempts: () => ({ error: "Too many attempts. Try again later." }),
+}));
+
 describe("POST /api/auth/login", () => {
   beforeEach(() => {
     vi.clearAllMocks();

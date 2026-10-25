@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
-import { appBaseUrl, sendEmail } from "../../../../lib/email";
+import { appBaseUrl, includeDevLink, sendEmail } from "../../../../lib/email";
 import { prisma } from "../../../../lib/prisma";
+import { allowRequest, clientIp, tooManyAttempts } from "../../../../lib/request-limit";
 import { createEmailToken } from "../../../../lib/tokens";
 
 export const dynamic = "force-dynamic";
@@ -17,6 +18,15 @@ export async function POST(request: Request) {
 
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     return NextResponse.json(generic);
+  }
+
+  const allowed = await allowRequest(
+    `forgot:${clientIp(request)}:${email}`,
+    5,
+    60 * 60 * 1000,
+  );
+  if (!allowed) {
+    return NextResponse.json(tooManyAttempts(), { status: 429 });
   }
 
   const user = await prisma.user.findUnique({ where: { email } });
@@ -36,7 +46,6 @@ export async function POST(request: Request) {
   return NextResponse.json({
     ...generic,
     emailSent: sent.ok,
-    // Only expose link when email provider missing (local / misconfigured)
-    ...(sent.ok ? {} : { devLink: link }),
+    ...(sent.ok || !includeDevLink() ? {} : { devLink: link }),
   });
 }

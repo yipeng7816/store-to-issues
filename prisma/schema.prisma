@@ -137,3 +137,10 @@ model SyncRun {
 
   @@index([userId, startedAt])
 }
+
+/// Fixed-window counters for login, register, password reset, and contact.
+model RateLimit {
+  key     String   @id
+  count   Int      @default(0)
+  resetAt DateTime
+}

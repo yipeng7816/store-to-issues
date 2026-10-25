@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { defaultTrialEndsAt } from "../../../../lib/billing";
-import { appBaseUrl, sendEmail } from "../../../../lib/email";
+import { appBaseUrl, includeDevLink, sendEmail } from "../../../../lib/email";
 import { prisma } from "../../../../lib/prisma";
+import { allowRequest, clientIp, tooManyAttempts } from "../../../../lib/request-limit";
 import { getSession } from "../../../../lib/session";
 import { createEmailToken } from "../../../../lib/tokens";
 
@@ -21,6 +22,11 @@ export async function POST(request: Request) {
       { error: "Password must be at least 8 characters." },
       { status: 400 },
     );
+  }
+
+  const allowed = await allowRequest(`register:${clientIp(request)}`, 5, 60 * 60 * 1000);
+  if (!allowed) {
+    return NextResponse.json(tooManyAttempts(), { status: 429 });
   }
 
   const existing = await prisma.user.findUnique({ where: { email } });
@@ -57,6 +63,6 @@ export async function POST(request: Request) {
     ok: true,
     email: user.email,
     emailSent: sent.ok,
-    ...(sent.ok ? {} : { devVerifyLink: link }),
+    ...(sent.ok || !includeDevLink() ? {} : { devVerifyLink: link }),
   });
 }

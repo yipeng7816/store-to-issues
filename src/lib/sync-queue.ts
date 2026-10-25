@@ -4,11 +4,34 @@ import { runSync } from "./sync";
 
 export type SyncJobSource = "manual" | "cron";
 
+/** Platform maxDuration is 60s. A running row older than this was killed mid-sync. */
+const STALE_RUNNING_MS = 2 * 60 * 1000;
+
+export async function expireStaleRunningJobs(userId: string) {
+  const cutoff = new Date(Date.now() - STALE_RUNNING_MS);
+  await prisma.syncJob.updateMany({
+    where: {
+      userId,
+      status: "running",
+      OR: [
+        { startedAt: { lt: cutoff } },
+        { startedAt: null, createdAt: { lt: cutoff } },
+      ],
+    },
+    data: {
+      status: "error",
+      finishedAt: new Date(),
+      message: "timed out",
+    },
+  });
+}
+
 /**
  * Enqueue a sync for a user. If one is already pending/running, reuse it
  * (manual waits on running; cron skips duplicate pending).
  */
 export async function enqueueSync(userId: string, source: SyncJobSource) {
+  await expireStaleRunningJobs(userId);
   const active = await prisma.syncJob.findFirst({
     where: { userId, status: { in: ["pending", "running"] } },
     orderBy: { createdAt: "desc" },
@@ -65,6 +88,7 @@ export async function processJob(jobId: string) {
 
 /** Manual path: enqueue then run immediately (returns sync result). */
 export async function enqueueAndRun(userId: string) {
+  await expireStaleRunningJobs(userId);
   const existing = await prisma.syncJob.findFirst({
     where: { userId, status: "running" },
   });

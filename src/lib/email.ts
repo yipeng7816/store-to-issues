@@ -12,6 +12,19 @@ export function emailConfigured(): boolean {
   return Boolean(process.env.RESEND_API_KEY);
 }
 
+/** Local only. Production must not return reset or verify links in JSON. */
+export function includeDevLink(): boolean {
+  return process.env.NODE_ENV !== "production";
+}
+
+export function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
 type SendArgs = {
   to: string;
   subject: string;

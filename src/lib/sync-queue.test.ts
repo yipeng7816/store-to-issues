@@ -50,6 +50,7 @@ describe("enqueueAndRun", () => {
   it("creates pending job, claims it, and returns sync ok", async () => {
     findFirst.mockResolvedValue(null);
     updateMany
+      .mockResolvedValueOnce({ count: 0 }) // expire stale running
       .mockResolvedValueOnce({ count: 0 }) // supersede pending
       .mockResolvedValueOnce({ count: 1 }); // claim
     create.mockResolvedValue({ id: "job-1", userId: "u1", status: "pending" });
@@ -83,6 +84,7 @@ describe("enqueueAndRun", () => {
   it("marks job error when runSync fails", async () => {
     findFirst.mockResolvedValue(null);
     updateMany
+      .mockResolvedValueOnce({ count: 0 }) // expire stale running
       .mockResolvedValueOnce({ count: 0 })
       .mockResolvedValueOnce({ count: 1 });
     create.mockResolvedValue({ id: "job-2", userId: "u1", status: "pending" });
@@ -112,5 +114,34 @@ describe("enqueueAndRun", () => {
         message: "No reviews fetched from either store",
       }),
     });
+  });
+
+  it("expires a stale running job before starting another", async () => {
+    findFirst.mockResolvedValue(null);
+    updateMany.mockResolvedValue({ count: 1 });
+    create.mockResolvedValue({ id: "job-3", userId: "u1", status: "pending" });
+    findUnique.mockResolvedValue({
+      id: "job-3",
+      userId: "u1",
+      status: "running",
+    });
+    runSync.mockResolvedValue({
+      ok: true,
+      fetched: 0,
+      createdIssues: 0,
+      mergedInto: 0,
+    });
+    update.mockResolvedValue({});
+
+    const { enqueueAndRun } = await import("./sync-queue");
+    const result = await enqueueAndRun("u1");
+    expect(result).toMatchObject({ ok: true, jobId: "job-3" });
+    expect(updateMany).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({
+        where: expect.objectContaining({ userId: "u1", status: "running" }),
+        data: expect.objectContaining({ status: "error", message: "timed out" }),
+      }),
+    );
   });
 });

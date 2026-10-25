@@ -35,6 +35,12 @@ vi.mock("../../../../lib/billing", () => ({
   defaultTrialEndsAt: () => new Date("2030-01-01T00:00:00.000Z"),
 }));
 
+vi.mock("../../../../lib/request-limit", () => ({
+  allowRequest: async () => true,
+  clientIp: () => "127.0.0.1",
+  tooManyAttempts: () => ({ error: "Too many attempts. Try again later." }),
+}));
+
 describe("POST /api/auth/register", () => {
   beforeEach(() => {
     vi.clearAllMocks();

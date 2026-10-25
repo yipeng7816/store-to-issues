@@ -39,6 +39,7 @@
 | ✅ | Resend `mail.ypmyjob.fun` 验证；生产 `EMAIL_FROM=noreply@mail.ypmyjob.fun` |
 | ✅ | 控制台同步摘要随 EN/中文切换（2026-10-24 已部署） |
 | ✅ | 合并只进当前仓库仍打开的 Issue；短评 / dry-run / 写入中断不再拆出重复 Issue（2026-10-25） |
+| ✅ | 同步超时可恢复；生产不回传重置链接；登录/注册/找回/联系限流（2026-10-25） |
 | ⏳ | 真 ASC / Play 密钥端到端（无公开沙箱；本地可用 `scripts/test-google-play.ts --live`） |
 | ⏳ | 对外发帖；填写 `EXPERIMENT_START` 开始 14/60/120 天闸门 |
 
@@ -72,7 +73,7 @@
 | Creem Live + Payout | ✅ Live 收款；支付宝 Payout 已配 |
 | Resend 发信域 | ✅ `mail.ypmyjob.fun` Verified |
 | 管理员 `isAdmin` | ✅ 可 SQL 设置 |
-| `npm test`（Vitest） | ✅ 90 项；说明见 [TEST.md](./TEST.md) |
+| `npm test`（Vitest） | ✅ 101 项；说明见 [TEST.md](./TEST.md) |
 
 ---
 

@@ -1,14 +1,10 @@
 import { createCipheriv, createDecipheriv, createHash, randomBytes } from "crypto";
+import { encryptionSecret } from "./secrets";
 
 const PREFIX = "enc:v1:";
 
 function keyBytes(): Buffer {
-  const secret = process.env.ENCRYPTION_KEY || process.env.SESSION_SECRET || "";
-  if (!secret || secret.length < 16) {
-    // Dev fallback — set ENCRYPTION_KEY in production.
-    return createHash("sha256").update("store-to-issues-dev-encryption").digest();
-  }
-  return createHash("sha256").update(secret).digest();
+  return createHash("sha256").update(encryptionSecret()).digest();
 }
 
 /** Encrypt a secret for DB storage. Empty string stays empty. */

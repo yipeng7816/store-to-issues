@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
-import { appBaseUrl, sendEmail } from "../../../../lib/email";
+import { appBaseUrl, escapeHtml, includeDevLink, sendEmail } from "../../../../lib/email";
 import { prisma } from "../../../../lib/prisma";
 import { requireUserId } from "../../../../lib/session";
 import { createEmailToken } from "../../../../lib/tokens";
@@ -49,12 +49,12 @@ export async function POST(request: Request) {
     to: newEmail,
     subject: "Confirm your new StoreToIssues email",
     text: `Confirm email change to ${newEmail}: ${link}\n\nLink expires in 24 hours.`,
-    html: `<p>Confirm email change to <strong>${newEmail}</strong>:</p><p><a href="${link}">${link}</a></p><p>Link expires in 24 hours.</p>`,
+    html: `<p>Confirm email change to <strong>${escapeHtml(newEmail)}</strong>:</p><p><a href="${link}">${escapeHtml(link)}</a></p><p>Link expires in 24 hours.</p>`,
   });
 
   return NextResponse.json({
     ok: true,
     emailSent: sent.ok,
-    ...(sent.ok ? {} : { devLink: link }),
+    ...(sent.ok || !includeDevLink() ? {} : { devLink: link }),
   });
 }

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { appBaseUrl, sendEmail } from "../../../../lib/email";
+import { appBaseUrl, includeDevLink, sendEmail } from "../../../../lib/email";
 import { prisma } from "../../../../lib/prisma";
 import { getSession } from "../../../../lib/session";
 import {
@@ -40,7 +40,7 @@ export async function POST(request: Request) {
     return NextResponse.json({
       ok: true,
       emailSent: sent.ok,
-      ...(sent.ok ? {} : { devLink: link }),
+      ...(sent.ok || !includeDevLink() ? {} : { devLink: link }),
     });
   }
 
