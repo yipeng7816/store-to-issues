@@ -1,5 +1,18 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { createOrCommentIssue } from "./github";
+import { createOrCommentIssue, textHasReviewMarker } from "./github";
+
+describe("textHasReviewMarker", () => {
+  it("matches the store and external id lines written into an issue", () => {
+    const body = [
+      "**Store:** app_store",
+      "**Rating:** 1/5",
+      "**External id:** `ios-1`",
+    ].join("\n");
+    expect(textHasReviewMarker(body, "app_store", "ios-1")).toBe(true);
+    expect(textHasReviewMarker(body, "google_play", "ios-1")).toBe(false);
+    expect(textHasReviewMarker(body, "app_store", "ios-2")).toBe(false);
+  });
+});
 
 describe("createOrCommentIssue", () => {
   const prevToken = process.env.GITHUB_TOKEN;

@@ -1,6 +1,6 @@
 # StoreToIssues 进度与功能清单
 
-更新：2026-10-24
+更新：2026-10-25
 
 | | |
 |--|--|
@@ -38,6 +38,7 @@
 | ✅ | Creem Payout（支付宝）+ 真卡付一笔（Live $12，2026-10-23） |
 | ✅ | Resend `mail.ypmyjob.fun` 验证；生产 `EMAIL_FROM=noreply@mail.ypmyjob.fun` |
 | ✅ | 控制台同步摘要随 EN/中文切换（2026-10-24 已部署） |
+| ✅ | 合并只进当前仓库仍打开的 Issue；短评 / dry-run / 写入中断不再拆出重复 Issue（2026-10-25） |
 | ⏳ | 真 ASC / Play 密钥端到端（无公开沙箱；本地可用 `scripts/test-google-play.ts --live`） |
 | ⏳ | 对外发帖；填写 `EXPERIMENT_START` 开始 14/60/120 天闸门 |
 
@@ -53,7 +54,7 @@
 | 账号 | 注册 / 登录 / 退出；会话 cookie；改密；改邮（新邮箱确认） |
 | 邮件 | 注册验证、找回重置、改邮确认（Resend · `mail.ypmyjob.fun`） |
 | 设置 | 每用户 GitHub / ASC / Play；密钥加密入库；mock、星级阈值 |
-| 同步 | 双端或 mock → 星级过滤 → 模糊合并 → GitHub Issue |
+| 同步 | 双端或 mock → 星级过滤 → 合并到当前仓库的开放 Issue → GitHub |
 | 工程 | `SyncJob` 防并发；Cron 入队消化；429/5xx 退避；GitHub 写间隔 + 查状态并发 4 |
 | 翻页 | ASC `links.next` / Play `nextPageToken`；默认最多 10 页（`REVIEW_MAX_PAGES`） |
 | 控制台 | 同步、最近记录、评价、待修 Issue（开/关可点 GitHub） |
@@ -71,7 +72,7 @@
 | Creem Live + Payout | ✅ Live 收款；支付宝 Payout 已配 |
 | Resend 发信域 | ✅ `mail.ypmyjob.fun` Verified |
 | 管理员 `isAdmin` | ✅ 可 SQL 设置 |
-| `npm test`（Vitest） | ✅ 约 72 项；说明见 [TEST.md](./TEST.md) |
+| `npm test`（Vitest） | ✅ 90 项；说明见 [TEST.md](./TEST.md) |
 
 ---
 

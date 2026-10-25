@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useT, type CopyKey } from "../lib/i18n";
+import { issueNumber } from "../lib/issue-ref";
 
 type Review = {
   id: string;
@@ -340,14 +341,15 @@ export function SyncPanel() {
             </li>
           ) : null}
           {reviews.map((r) => {
-            const num = r.githubIssue && !r.githubIssue.startsWith("dry-run:")
-              ? Number(r.githubIssue)
-              : NaN;
+            const num = issueNumber(r.githubIssue);
             const href =
               r.githubIssueUrl ||
-              (Number.isFinite(num) && num > 0
-                ? resolveIssueUrl(num)
-                : null);
+              (num ? resolveIssueUrl(num) : null);
+            const issueLabel = num
+              ? `#${num}`
+              : r.githubIssue?.startsWith("pending")
+                ? "…"
+                : r.githubIssue || "—";
             return (
               <li
                 key={r.id}
@@ -374,10 +376,10 @@ export function SyncPanel() {
                       rel="noreferrer"
                       className="font-medium text-teal-800 underline"
                     >
-                      #{r.githubIssue}
+                      {issueLabel}
                     </a>
                   ) : (
-                    r.githubIssue || "—"
+                    issueLabel
                   )}
                 </p>
               </li>

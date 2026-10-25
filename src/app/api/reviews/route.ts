@@ -1,16 +1,11 @@
 import { NextResponse } from "next/server";
 import { credentialsFromSettings } from "../../../lib/credentials";
 import { fetchIssueStates } from "../../../lib/github";
+import { parseIssueRef, sameRepo } from "../../../lib/issue-ref";
 import { prisma } from "../../../lib/prisma";
 import { requireUserId } from "../../../lib/session";
 
 export const dynamic = "force-dynamic";
-
-function parseIssueNumber(raw: string | null | undefined): number | null {
-  if (!raw || raw.startsWith("dry-run:")) return null;
-  const n = Number(raw);
-  return Number.isFinite(n) && n > 0 ? n : null;
-}
 
 function issueUrl(repo: string, num: number, fromApi?: string): string {
   if (fromApi) return fromApi;
@@ -43,9 +38,12 @@ export async function GET() {
   const githubRepo = creds.githubRepo;
   const githubToken = creds.githubToken;
 
-  const numbers = reviews
-    .map((r) => parseIssueNumber(r.githubIssue))
-    .filter((n): n is number => n !== null);
+  const numbers = reviews.flatMap((r) => {
+    const ref = parseIssueRef(r.githubIssue);
+    if (ref.kind !== "issue") return [];
+    if (ref.repo && !sameRepo(ref.repo, githubRepo)) return [];
+    return [ref.number];
+  });
 
   const issueStates = await fetchIssueStates({
     numbers,
@@ -55,7 +53,7 @@ export async function GET() {
 
   // Group by issue for the work queue
   const byIssue = new Map<
-    number,
+    string,
     {
       number: number;
       title: string;
@@ -67,11 +65,15 @@ export async function GET() {
   >();
 
   for (const r of reviews) {
-    const num = parseIssueNumber(r.githubIssue);
-    if (num === null) continue;
-    const info = issueStates[num];
-    const url = issueUrl(githubRepo, num, info?.url);
-    const existing = byIssue.get(num);
+    const ref = parseIssueRef(r.githubIssue);
+    if (ref.kind !== "issue") continue;
+    const num = ref.number;
+    const repoForUrl = ref.repo || githubRepo;
+    const same = !ref.repo || sameRepo(ref.repo, githubRepo);
+    const info = same ? issueStates[num] : undefined;
+    const url = issueUrl(repoForUrl, num, info?.url);
+    const groupKey = `${repoForUrl.toLowerCase()}#${num}`;
+    const existing = byIssue.get(groupKey);
     if (existing) {
       existing.reviewCount += 1;
       existing.ratingMin = Math.min(existing.ratingMin, r.rating);
@@ -79,7 +81,7 @@ export async function GET() {
         existing.title = r.title || r.clusterKey || existing.title;
       }
     } else {
-      byIssue.set(num, {
+      byIssue.set(groupKey, {
         number: num,
         title: info?.title || r.title || r.clusterKey || `#${num}`,
         state: info?.state || "unknown",
@@ -97,10 +99,14 @@ export async function GET() {
   });
 
   const reviewsWithLinks = reviews.map((r) => {
-    const num = parseIssueNumber(r.githubIssue);
+    const ref = parseIssueRef(r.githubIssue);
+    if (ref.kind !== "issue") return { ...r, githubIssueUrl: null };
+    const repoForUrl = ref.repo || githubRepo;
+    const same = !ref.repo || sameRepo(ref.repo, githubRepo);
+    const info = same ? issueStates[ref.number] : undefined;
     return {
       ...r,
-      githubIssueUrl: num ? issueUrl(githubRepo, num, issueStates[num]?.url) : null,
+      githubIssueUrl: issueUrl(repoForUrl, ref.number, info?.url),
     };
   });
 
