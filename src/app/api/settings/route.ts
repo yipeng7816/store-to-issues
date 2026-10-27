@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { logProductError } from "../../../lib/analytics";
+import { logProductErrorWithContext } from "../../../lib/analytics";
+import { settingsSnapshotFromBody } from "../../../lib/settings-debug";
 import { encryptSecret } from "../../../lib/crypto";
 import { prisma } from "../../../lib/prisma";
 import { requireUserId } from "../../../lib/session";
@@ -37,9 +38,14 @@ export async function PUT(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  let body: Record<string, unknown> = {};
+  let existing: Awaited<
+    ReturnType<typeof prisma.userSettings.findUnique>
+  > = null;
+
   try {
-    const body = (await request.json()) as Record<string, unknown>;
-    const existing = await prisma.userSettings.findUnique({ where: { userId } });
+    body = (await request.json()) as Record<string, unknown>;
+    existing = await prisma.userSettings.findUnique({ where: { userId } });
 
     const pickSecret = (incoming: unknown, previous: string | undefined) => {
       if (typeof incoming === "string" && incoming.length > 0) {
@@ -77,7 +83,10 @@ export async function PUT(request: Request) {
     return NextResponse.json({ ok: true });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
-    logProductError("settings_error", userId, message.slice(0, 200));
+    logProductErrorWithContext("settings_error", userId, {
+      reason: message.slice(0, 300),
+      attempted: settingsSnapshotFromBody(body, existing),
+    });
     return NextResponse.json({ error: "Could not save settings." }, { status: 500 });
   }
 }

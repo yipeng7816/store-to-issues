@@ -1,4 +1,6 @@
 import { prisma } from "./prisma";
+import type { UserDebugContext } from "./settings-debug";
+import { loadUserDebugContext } from "./settings-debug";
 
 export const PRODUCT_EVENTS = [
   "register",
@@ -30,6 +32,17 @@ const MAX_PATH = 200;
 const MAX_REFERRER = 500;
 const MAX_VISITOR_KEY = 64;
 const MAX_META = 500;
+/** Error events may include settings snapshot JSON for admin debugging. */
+export const MAX_ERROR_META = 4000;
+
+export function serializeErrorMeta(payload: Record<string, unknown>): string {
+  try {
+    return JSON.stringify(payload).slice(0, MAX_ERROR_META);
+  } catch {
+    const reason = payload.reason;
+    return String(reason ?? "error").slice(0, MAX_ERROR_META);
+  }
+}
 
 export function normalizePagePath(path: string): string | null {
   const trimmed = path.trim();
@@ -87,6 +100,7 @@ function writeProductEvent(
   name: string,
   userId?: string | null,
   meta?: string,
+  metaLimit = MAX_META,
 ): void {
   void (async () => {
     try {
@@ -94,7 +108,7 @@ function writeProductEvent(
         data: {
           name,
           userId: userId ?? null,
-          meta: (meta ?? "").slice(0, MAX_META),
+          meta: (meta ?? "").slice(0, metaLimit),
         },
       });
     } catch (err) {
@@ -118,5 +132,32 @@ export function logProductError(
   userId?: string | null,
   meta?: string,
 ): void {
-  writeProductEvent(name, userId, meta);
+  writeProductEvent(name, userId, meta, MAX_ERROR_META);
+}
+
+/** Attach saved settings / billing context for admin debugging (no secret values). */
+export function logProductErrorWithContext(
+  name: ErrorProductEventName,
+  userId: string | null | undefined,
+  payload: Record<string, unknown>,
+): void {
+  void (async () => {
+    try {
+      const context: UserDebugContext | null =
+        userId ? await loadUserDebugContext(userId) : null;
+      const meta = serializeErrorMeta({
+        ...payload,
+        ...(context ? { user: context } : {}),
+      });
+      writeProductEvent(name, userId, meta, MAX_ERROR_META);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      writeProductEvent(
+        name,
+        userId,
+        serializeErrorMeta({ ...payload, contextLoadError: message }),
+        MAX_ERROR_META,
+      );
+    }
+  })();
 }

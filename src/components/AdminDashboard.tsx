@@ -4,6 +4,16 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import type { AdminMetricsPayload } from "../lib/admin-metrics";
 
+function formatErrorMeta(meta: string): string {
+  if (!meta) return "";
+  try {
+    const parsed = JSON.parse(meta) as unknown;
+    return JSON.stringify(parsed, null, 2);
+  } catch {
+    return meta;
+  }
+}
+
 function Stat({ label, value }: { label: string; value: string | number }) {
   return (
     <div className="rounded-xl border border-stone-200 bg-white px-4 py-3">
@@ -79,7 +89,7 @@ export function AdminDashboard() {
       <section>
         <h2 className="text-lg font-semibold">最近报错</h2>
         <p className="mt-1 text-xs text-stone-500">
-          仅记录失败事件（不含密码、token）。最多 50 条。
+          失败时附带 App ID、包名、GitHub 仓库等配置快照；密钥只记「是否已填」，不存明文。最多 50 条。
         </p>
         <ul className="mt-3 max-h-80 space-y-2 overflow-y-auto text-sm">
           {metrics.recentErrors.length === 0 ? (
@@ -90,14 +100,16 @@ export function AdminDashboard() {
                 key={`${e.name}-${e.createdAt}-${e.meta}`}
                 className="rounded-lg border border-red-100 bg-white px-3 py-2"
               >
-                <p className="font-mono text-xs font-medium text-red-900">
-                  {e.name}
-                  {e.meta ? ` · ${e.meta}` : ""}
-                </p>
+                <p className="font-mono text-xs font-medium text-red-900">{e.name}</p>
                 <p className="text-xs text-stone-500">
                   {new Date(e.createdAt).toLocaleString()}
                   {e.userEmail ? ` · ${e.userEmail}` : e.userId ? ` · ${e.userId}` : ""}
                 </p>
+                {e.meta ? (
+                  <pre className="mt-2 max-h-40 overflow-auto whitespace-pre-wrap break-all rounded bg-stone-50 p-2 text-[11px] text-stone-700">
+                    {formatErrorMeta(e.meta)}
+                  </pre>
+                ) : null}
               </li>
             ))
           )}

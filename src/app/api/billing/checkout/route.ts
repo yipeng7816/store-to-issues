@@ -8,7 +8,7 @@ import {
   createCreemCheckout,
   creemConfigured,
 } from "../../../../lib/creem";
-import { logProductError, logProductEvent } from "../../../../lib/analytics";
+import { logProductErrorWithContext, logProductEvent } from "../../../../lib/analytics";
 import { prisma } from "../../../../lib/prisma";
 import { requireUserId } from "../../../../lib/session";
 
@@ -19,7 +19,9 @@ export async function POST(request: Request) {
   }
 
   if (!billingConfigured()) {
-    logProductError("checkout_error", userId, "billing_not_configured");
+    logProductErrorWithContext("checkout_error", userId, {
+      reason: "billing_not_configured",
+    });
     return NextResponse.json(
       {
         error:
@@ -47,7 +49,9 @@ export async function POST(request: Request) {
       key.startsWith("creem_") &&
       !key.startsWith("creem_test_")
     ) {
-      logProductError("checkout_error", userId, "creem_test_key_mismatch");
+      logProductErrorWithContext("checkout_error", userId, {
+        reason: "creem_test_key_mismatch",
+      });
       return NextResponse.json(
         {
           error:
@@ -67,20 +71,27 @@ export async function POST(request: Request) {
       return NextResponse.json({ url: checkout.url, provider: "creem" });
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
-      logProductError("checkout_error", userId, `creem:${message.slice(0, 120)}`);
+      logProductErrorWithContext("checkout_error", userId, {
+        reason: "creem_checkout_failed",
+        detail: message.slice(0, 200),
+      });
       return NextResponse.json({ error: message }, { status: 502 });
     }
   }
 
   // Stripe fallback (legacy / if Creem not set)
   if (!stripeConfigured()) {
-    logProductError("checkout_error", userId, "no_billing_provider");
+    logProductErrorWithContext("checkout_error", userId, {
+      reason: "no_billing_provider",
+    });
     return NextResponse.json({ error: "No billing provider" }, { status: 501 });
   }
 
   const stripe = getStripe();
   if (!stripe) {
-    logProductError("checkout_error", userId, "stripe_unavailable");
+    logProductErrorWithContext("checkout_error", userId, {
+      reason: "stripe_unavailable",
+    });
     return NextResponse.json({ error: "Stripe unavailable" }, { status: 501 });
   }
 

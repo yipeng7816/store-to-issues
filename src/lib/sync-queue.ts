@@ -1,4 +1,4 @@
-import { logProductError, logProductEvent } from "./analytics";
+import { logProductErrorWithContext, logProductEvent } from "./analytics";
 import { prisma } from "./prisma";
 import { sleep } from "./rate-limit";
 import { runSync } from "./sync";
@@ -79,7 +79,10 @@ export async function processJob(jobId: string) {
     if (result.ok) {
       logProductEvent("sync_ok", job.userId, message);
     } else {
-      logProductError("sync_error", job.userId, message);
+      logProductErrorWithContext("sync_error", job.userId, {
+        reason: "sync_failed",
+        detail: message,
+      });
     }
     return { ...result, jobId };
   } catch (err) {
@@ -88,7 +91,10 @@ export async function processJob(jobId: string) {
       where: { id: jobId },
       data: { status: "error", finishedAt: new Date(), message },
     });
-    logProductError("sync_error", job.userId, message);
+    logProductErrorWithContext("sync_error", job.userId, {
+      reason: "sync_exception",
+      detail: message,
+    });
     return { ok: false as const, error: message, jobId };
   }
 }

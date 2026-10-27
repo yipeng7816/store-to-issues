@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { logProductError } from "../../../lib/analytics";
+import { logProductErrorWithContext } from "../../../lib/analytics";
 import { checkSyncAccess } from "../../../lib/billing";
 import { prisma } from "../../../lib/prisma";
 import { requireUserId } from "../../../lib/session";
@@ -21,11 +21,10 @@ export async function POST() {
 
   const access = checkSyncAccess(user);
   if (!access.allowed) {
-    logProductError(
-      "sync_error",
-      userId,
-      `subscription_required:${access.reason ?? "unknown"}`,
-    );
+    logProductErrorWithContext("sync_error", userId, {
+      reason: "subscription_required",
+      detail: access.reason ?? "unknown",
+    });
     return NextResponse.json(
       {
         error: "Subscription required",
@@ -43,7 +42,10 @@ export async function POST() {
     const reason = result.error?.includes("already running")
       ? "already_running"
       : "enqueue_failed";
-    logProductError("sync_error", userId, reason);
+    logProductErrorWithContext("sync_error", userId, {
+      reason,
+      detail: result.error ?? "",
+    });
     return NextResponse.json(result, { status });
   }
   return NextResponse.json(result);
