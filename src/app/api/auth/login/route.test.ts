@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import bcrypt from "bcryptjs";
 
 const findUnique = vi.fn();
+const update = vi.fn();
 const sessionSave = vi.fn();
 const session: { userId?: string; email?: string; save: typeof sessionSave } = {
   save: sessionSave,
@@ -9,12 +10,19 @@ const session: { userId?: string; email?: string; save: typeof sessionSave } = {
 
 vi.mock("../../../../lib/prisma", () => ({
   prisma: {
-    user: { findUnique: (...args: unknown[]) => findUnique(...args) },
+    user: {
+      findUnique: (...args: unknown[]) => findUnique(...args),
+      update: (...args: unknown[]) => update(...args),
+    },
   },
 }));
 
 vi.mock("../../../../lib/session", () => ({
   getSession: async () => session,
+}));
+
+vi.mock("../../../../lib/analytics", () => ({
+  logProductEvent: vi.fn(),
 }));
 
 vi.mock("../../../../lib/request-limit", () => ({
@@ -76,6 +84,7 @@ describe("POST /api/auth/login", () => {
       email: "dev@example.com",
       passwordHash,
     });
+    update.mockResolvedValue({});
     const { POST } = await import("./route");
     const res = await POST(
       new Request("http://localhost/api/auth/login", {

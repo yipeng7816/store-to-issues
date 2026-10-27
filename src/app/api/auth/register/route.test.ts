@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const findUnique = vi.fn();
 const create = vi.fn();
+const update = vi.fn();
 const createEmailToken = vi.fn();
 const sendEmail = vi.fn();
 const sessionSave = vi.fn();
@@ -14,6 +15,7 @@ vi.mock("../../../../lib/prisma", () => ({
     user: {
       findUnique: (...args: unknown[]) => findUnique(...args),
       create: (...args: unknown[]) => create(...args),
+      update: (...args: unknown[]) => update(...args),
     },
   },
 }));
@@ -29,6 +31,10 @@ vi.mock("../../../../lib/tokens", () => ({
 vi.mock("../../../../lib/email", () => ({
   appBaseUrl: () => "http://localhost:3000",
   sendEmail: (...args: unknown[]) => sendEmail(...args),
+}));
+
+vi.mock("../../../../lib/analytics", () => ({
+  logProductEvent: vi.fn(),
 }));
 
 vi.mock("../../../../lib/billing", () => ({
@@ -93,6 +99,7 @@ describe("POST /api/auth/register", () => {
   it("creates trialing user and session on success", async () => {
     findUnique.mockResolvedValue(null);
     create.mockResolvedValue({ id: "u1", email: "a@b.com" });
+    update.mockResolvedValue({});
     createEmailToken.mockResolvedValue("raw-token");
     sendEmail.mockResolvedValue({ ok: true });
 

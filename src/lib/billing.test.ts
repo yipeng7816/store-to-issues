@@ -14,6 +14,7 @@ function user(overrides: Partial<User> = {}): User {
     createdAt: new Date(),
     updatedAt: new Date(),
     emailVerifiedAt: null,
+    lastLoginAt: null,
     isAdmin: false,
     planStatus: "none",
     trialEndsAt: null,

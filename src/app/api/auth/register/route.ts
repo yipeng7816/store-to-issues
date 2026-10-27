@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
+import { logProductEvent } from "../../../../lib/analytics";
 import { defaultTrialEndsAt } from "../../../../lib/billing";
 import { appBaseUrl, includeDevLink, sendEmail } from "../../../../lib/email";
 import { prisma } from "../../../../lib/prisma";
@@ -58,6 +59,13 @@ export async function POST(request: Request) {
   session.userId = user.id;
   session.email = user.email;
   await session.save();
+
+  const now = new Date();
+  await prisma.user.update({
+    where: { id: user.id },
+    data: { lastLoginAt: now },
+  });
+  void logProductEvent("register", user.id);
 
   return NextResponse.json({
     ok: true,

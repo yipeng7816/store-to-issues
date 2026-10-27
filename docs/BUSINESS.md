@@ -51,6 +51,8 @@
 
 支持邮箱：`ymyjobp@163.com`（环境变量 `SUPPORT_EMAIL`）。
 
+**流量与使用：** 管理员打开 `/admin` 或导航「看板」。说明见 [ANALYTICS.md](./ANALYTICS.md)。
+
 ## 验证标准（实验，不是代码功能）
 
 **EXPERIMENT_START：** _（发第一篇陌生人可见推广帖的当天填入，例如 2026-10-25）_

@@ -22,6 +22,7 @@ model User {
   updatedAt    DateTime @updatedAt
 
   emailVerifiedAt DateTime?
+  lastLoginAt     DateTime?
 
   // Local / owner unlock: bypasses trial and billing gates
   isAdmin Boolean @default(false)
@@ -143,4 +144,28 @@ model RateLimit {
   key     String   @id
   count   Int      @default(0)
   resetAt DateTime
+}
+
+/// First-party page views (path + anonymous visitor cookie id).
+model AnalyticsPageView {
+  id         String   @id @default(cuid())
+  path       String
+  visitorKey String
+  referrer   String   @default("")
+  createdAt  DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([visitorKey, createdAt])
+}
+
+/// Product funnel: register, login, sync_ok, sync_error, checkout_start.
+model AnalyticsProductEvent {
+  id        String   @id @default(cuid())
+  name      String
+  userId    String?
+  meta      String   @default("")
+  createdAt DateTime @default(now())
+
+  @@index([name, createdAt])
+  @@index([createdAt])
 }

@@ -8,6 +8,7 @@ import {
   createCreemCheckout,
   creemConfigured,
 } from "../../../../lib/creem";
+import { logProductEvent } from "../../../../lib/analytics";
 import { prisma } from "../../../../lib/prisma";
 import { requireUserId } from "../../../../lib/session";
 
@@ -60,6 +61,7 @@ export async function POST(request: Request) {
         customerEmail: user.email,
         userId: user.id,
       });
+      void logProductEvent("checkout_start", userId, "creem");
       return NextResponse.json({ url: checkout.url, provider: "creem" });
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
@@ -102,5 +104,6 @@ export async function POST(request: Request) {
     },
   });
 
+  void logProductEvent("checkout_start", userId, "stripe");
   return NextResponse.json({ url: session.url, provider: "stripe" });
 }

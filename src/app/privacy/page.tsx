@@ -21,7 +21,7 @@ export default function PrivacyPage() {
             </p>
             <p>
               <strong>我们收集什么：</strong>注册邮箱与密码哈希；你主动填写的 GitHub /
-              商店凭证（加密保存）；同步产生的评价与 Issue 元数据；联系表单内容；基础服务器日志。
+              商店凭证（加密保存）；同步产生的评价与 Issue 元数据；联系表单内容；基础服务器日志；匿名页面访问（路径 + 浏览器随机 ID，不存 IP）；产品使用事件（登录、同步、结账）；可选 Vercel Web Analytics。
             </p>
             <p>
               <strong>用途：</strong>提供同步与账号服务、安全、回复你的咨询、改进产品。我们不会出售你的个人数据。
@@ -46,7 +46,9 @@ export default function PrivacyPage() {
             <p>
               <strong>What we collect:</strong> account email and password hash; GitHub /
               store credentials you enter (encrypted at rest); synced review and issue
-              metadata; contact-form messages; basic server logs.
+              metadata; contact-form messages; basic server logs; anonymous page
+              views (path + random browser id, no IP stored); product usage events
+              (sign-in, sync, checkout); optional Vercel Web Analytics.
             </p>
             <p>
               <strong>Why:</strong> to run the product, keep accounts secure, answer

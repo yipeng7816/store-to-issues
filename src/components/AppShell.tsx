@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { LocaleProvider, useT } from "../lib/i18n";
+import { PageAnalytics } from "./PageAnalytics";
 
 function LangSwitch() {
   const { locale, setLocale } = useT();
@@ -36,12 +37,14 @@ function Header() {
   const router = useRouter();
   const pathname = usePathname();
   const [email, setEmail] = useState<string | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
     void fetch("/api/auth/me", { cache: "no-store" })
       .then((r) => r.json())
-      .then((d: { user?: { email?: string } | null }) => {
+      .then((d: { user?: { email?: string; isAdmin?: boolean } | null }) => {
         setEmail(d.user?.email || null);
+        setIsAdmin(Boolean(d.user?.isAdmin));
       });
   }, [pathname]);
 
@@ -67,6 +70,11 @@ function Header() {
           </Link>
           {email ? (
             <>
+              {isAdmin ? (
+                <Link href="/admin" className="rounded-full px-3 py-1.5 hover:bg-white">
+                  看板
+                </Link>
+              ) : null}
               <Link href="/settings" className="rounded-full px-3 py-1.5 hover:bg-white">
                 {t("navSettings")}
               </Link>
@@ -138,6 +146,7 @@ function Frame({ children }: { children: React.ReactNode }) {
 export function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <LocaleProvider>
+      <PageAnalytics />
       <Frame>{children}</Frame>
     </LocaleProvider>
   );
