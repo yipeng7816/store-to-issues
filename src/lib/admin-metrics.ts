@@ -1,3 +1,4 @@
+import { isErrorProductEventName } from "./analytics";
 import { prisma } from "./prisma";
 
 export type DailyMetricRow = {
@@ -21,9 +22,17 @@ export type AdminMetricsPayload = {
     activeLast7Days: number;
     pageViews30d: number;
     uniqueVisitors30d: number;
+    errors24h: number;
   };
   daily: DailyMetricRow[];
   topPaths: { path: string; views: number }[];
+  recentErrors: {
+    name: string;
+    meta: string;
+    userId: string | null;
+    userEmail: string | null;
+    createdAt: string;
+  }[];
   recentSignups: {
     email: string;
     createdAt: string;
@@ -119,6 +128,7 @@ export async function fetchAdminMetrics(
   `;
 
   const sevenAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+  const dayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
 
   const [
     users,
@@ -128,6 +138,8 @@ export async function fetchAdminMetrics(
     activeLast7Days,
     pageViews30d,
     uniqueVisitors30d,
+    errors24h,
+    recentErrorRows,
     recentUsers,
   ] = await Promise.all([
     prisma.user.count(),
@@ -163,6 +175,31 @@ export async function fetchAdminMetrics(
         where: { createdAt: { gte: since } },
       })
       .then((g) => g.length),
+    prisma.analyticsProductEvent.count({
+      where: {
+        createdAt: { gte: dayAgo },
+        OR: [
+          { name: { endsWith: "_error" } },
+          { name: { endsWith: "_failed" } },
+        ],
+      },
+    }),
+    prisma.analyticsProductEvent.findMany({
+      where: {
+        OR: [
+          { name: { endsWith: "_error" } },
+          { name: { endsWith: "_failed" } },
+        ],
+      },
+      orderBy: { createdAt: "desc" },
+      take: 50,
+      select: {
+        name: true,
+        meta: true,
+        userId: true,
+        createdAt: true,
+      },
+    }),
     prisma.user.findMany({
       orderBy: { createdAt: "desc" },
       take: 15,
@@ -176,6 +213,20 @@ export async function fetchAdminMetrics(
     }),
   ]);
 
+  const errorUserIds = [
+    ...new Set(
+      recentErrorRows.map((e) => e.userId).filter((id): id is string => Boolean(id)),
+    ),
+  ];
+  const errorUsers =
+    errorUserIds.length > 0
+      ? await prisma.user.findMany({
+          where: { id: { in: errorUserIds } },
+          select: { id: true, email: true },
+        })
+      : [];
+  const emailById = new Map(errorUsers.map((u) => [u.id, u.email]));
+
   return {
     generatedAt: new Date().toISOString(),
     rangeDays,
@@ -187,8 +238,18 @@ export async function fetchAdminMetrics(
       activeLast7Days,
       pageViews30d,
       uniqueVisitors30d,
+      errors24h,
     },
     daily: [...daily.values()],
+    recentErrors: recentErrorRows
+      .filter((e) => isErrorProductEventName(e.name))
+      .map((e) => ({
+        name: e.name,
+        meta: e.meta,
+        userId: e.userId,
+        userEmail: e.userId ? emailById.get(e.userId) ?? null : null,
+        createdAt: e.createdAt.toISOString(),
+      })),
     topPaths: topPaths.map((r) => ({
       path: r.path,
       views: Number(r.views),

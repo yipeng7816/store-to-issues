@@ -16,7 +16,8 @@
 |----|------|
 | **Vercel Web Analytics** | 托管侧访问曲线；在 Vercel 项目 → Analytics 启用 |
 | **`AnalyticsPageView`** | 首方页面浏览（匿名 `localStorage` visitor id，不存 IP） |
-| **`AnalyticsProductEvent`** | `register` / `login` / `sync_ok` / `sync_error` / `checkout_start` |
+| **`AnalyticsProductEvent`** | 成功：`register` / `login` / `sync_ok` / `checkout_start` |
+| | 失败（看板「最近报错」）：`*_error`、`*_failed`（如 `register_failed`、`settings_error`、`sync_error`） |
 | **`User.lastLoginAt`** | 上次登录时间 |
 
 ## 上线迁移

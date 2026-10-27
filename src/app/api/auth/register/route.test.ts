@@ -35,6 +35,7 @@ vi.mock("../../../../lib/email", () => ({
 
 vi.mock("../../../../lib/analytics", () => ({
   logProductEvent: vi.fn(),
+  logProductError: vi.fn(),
 }));
 
 vi.mock("../../../../lib/billing", () => ({

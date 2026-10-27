@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  isErrorProductEventName,
   normalizePagePath,
   normalizeReferrer,
   normalizeVisitorKey,
@@ -21,6 +22,12 @@ describe("analytics normalization", () => {
     expect(normalizeVisitorKey("abc")).toBeNull();
     expect(normalizeVisitorKey("abcd1234_abcd")).toBe("abcd1234_abcd");
     expect(normalizeVisitorKey("bad space")).toBeNull();
+  });
+
+  it("detects error event names", () => {
+    expect(isErrorProductEventName("sync_error")).toBe(true);
+    expect(isErrorProductEventName("register_failed")).toBe(true);
+    expect(isErrorProductEventName("login")).toBe(false);
   });
 
   it("normalizes referrer host", () => {

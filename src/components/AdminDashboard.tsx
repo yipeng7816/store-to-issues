@@ -73,6 +73,35 @@ export function AdminDashboard() {
         <Stat label="30 天页面浏览" value={t.pageViews30d} />
         <Stat label="30 天独立访客" value={t.uniqueVisitors30d} />
         <Stat label="已接真商店 API" value={t.liveStoreConfigured} />
+        <Stat label="24 小时内报错" value={t.errors24h} />
+      </section>
+
+      <section>
+        <h2 className="text-lg font-semibold">最近报错</h2>
+        <p className="mt-1 text-xs text-stone-500">
+          仅记录失败事件（不含密码、token）。最多 50 条。
+        </p>
+        <ul className="mt-3 max-h-80 space-y-2 overflow-y-auto text-sm">
+          {metrics.recentErrors.length === 0 ? (
+            <li className="text-stone-500">暂无报错记录</li>
+          ) : (
+            metrics.recentErrors.map((e) => (
+              <li
+                key={`${e.name}-${e.createdAt}-${e.meta}`}
+                className="rounded-lg border border-red-100 bg-white px-3 py-2"
+              >
+                <p className="font-mono text-xs font-medium text-red-900">
+                  {e.name}
+                  {e.meta ? ` · ${e.meta}` : ""}
+                </p>
+                <p className="text-xs text-stone-500">
+                  {new Date(e.createdAt).toLocaleString()}
+                  {e.userEmail ? ` · ${e.userEmail}` : e.userId ? ` · ${e.userId}` : ""}
+                </p>
+              </li>
+            ))
+          )}
+        </ul>
       </section>
 
       <section>

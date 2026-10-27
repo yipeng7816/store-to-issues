@@ -8,7 +8,23 @@ export const PRODUCT_EVENTS = [
   "checkout_start",
 ] as const;
 
+/** Server-side failure signals only (no passwords, tokens, or full emails in meta). */
+export const ERROR_PRODUCT_EVENTS = [
+  "register_failed",
+  "login_failed",
+  "settings_error",
+  "sync_error",
+  "checkout_error",
+  "contact_error",
+] as const;
+
 export type ProductEventName = (typeof PRODUCT_EVENTS)[number];
+export type ErrorProductEventName = (typeof ERROR_PRODUCT_EVENTS)[number];
+export type AnyProductEventName = ProductEventName | ErrorProductEventName;
+
+export function isErrorProductEventName(name: string): boolean {
+  return name.endsWith("_error") || name.endsWith("_failed");
+}
 
 const MAX_PATH = 200;
 const MAX_REFERRER = 500;
@@ -67,22 +83,40 @@ export async function recordPageView(input: {
   }
 }
 
-export async function logProductEvent(
+function writeProductEvent(
+  name: string,
+  userId?: string | null,
+  meta?: string,
+): void {
+  void (async () => {
+    try {
+      await prisma.analyticsProductEvent.create({
+        data: {
+          name,
+          userId: userId ?? null,
+          meta: (meta ?? "").slice(0, MAX_META),
+        },
+      });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      if (message.includes("AnalyticsProductEvent")) return;
+      console.error("[analytics] event", name, message);
+    }
+  })();
+}
+
+export function logProductEvent(
   name: ProductEventName,
   userId?: string | null,
   meta?: string,
-): Promise<void> {
-  try {
-    await prisma.analyticsProductEvent.create({
-      data: {
-        name,
-        userId: userId ?? null,
-        meta: (meta ?? "").slice(0, MAX_META),
-      },
-    });
-  } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    if (message.includes("AnalyticsProductEvent")) return;
-    console.error("[analytics] event", name, message);
-  }
+): void {
+  writeProductEvent(name, userId, meta);
+}
+
+export function logProductError(
+  name: ErrorProductEventName,
+  userId?: string | null,
+  meta?: string,
+): void {
+  writeProductEvent(name, userId, meta);
 }

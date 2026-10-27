@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
-import { logProductEvent } from "../../../../lib/analytics";
+import { logProductError, logProductEvent } from "../../../../lib/analytics";
 import { prisma } from "../../../../lib/prisma";
 import { allowRequest, clientIp, tooManyAttempts } from "../../../../lib/request-limit";
 import { getSession } from "../../../../lib/session";
@@ -16,16 +16,19 @@ export async function POST(request: Request) {
     15 * 60 * 1000,
   );
   if (!allowed) {
+    logProductError("login_failed", null, "rate_limit");
     return NextResponse.json(tooManyAttempts(), { status: 429 });
   }
 
   const user = await prisma.user.findUnique({ where: { email } });
   if (!user) {
+    logProductError("login_failed", null, "invalid_credentials");
     return NextResponse.json({ error: "Invalid email or password." }, { status: 401 });
   }
 
   const ok = await bcrypt.compare(password, user.passwordHash);
   if (!ok) {
+    logProductError("login_failed", user.id, "invalid_credentials");
     return NextResponse.json({ error: "Invalid email or password." }, { status: 401 });
   }
 
@@ -38,7 +41,7 @@ export async function POST(request: Request) {
     where: { id: user.id },
     data: { lastLoginAt: new Date() },
   });
-  void logProductEvent("login", user.id);
+  logProductEvent("login", user.id);
 
   return NextResponse.json({ ok: true, email: user.email });
 }

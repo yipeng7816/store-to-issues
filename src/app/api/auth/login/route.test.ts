@@ -23,6 +23,7 @@ vi.mock("../../../../lib/session", () => ({
 
 vi.mock("../../../../lib/analytics", () => ({
   logProductEvent: vi.fn(),
+  logProductError: vi.fn(),
 }));
 
 vi.mock("../../../../lib/request-limit", () => ({

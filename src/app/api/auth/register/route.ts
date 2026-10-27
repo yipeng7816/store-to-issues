@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
-import { logProductEvent } from "../../../../lib/analytics";
+import { logProductError, logProductEvent } from "../../../../lib/analytics";
 import { defaultTrialEndsAt } from "../../../../lib/billing";
 import { appBaseUrl, includeDevLink, sendEmail } from "../../../../lib/email";
 import { prisma } from "../../../../lib/prisma";
@@ -16,9 +16,11 @@ export async function POST(request: Request) {
   const password = body.password || "";
 
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    logProductError("register_failed", null, "invalid_email");
     return NextResponse.json({ error: "Invalid email." }, { status: 400 });
   }
   if (password.length < 8) {
+    logProductError("register_failed", null, "password_too_short");
     return NextResponse.json(
       { error: "Password must be at least 8 characters." },
       { status: 400 },
@@ -27,11 +29,13 @@ export async function POST(request: Request) {
 
   const allowed = await allowRequest(`register:${clientIp(request)}`, 5, 60 * 60 * 1000);
   if (!allowed) {
+    logProductError("register_failed", null, "rate_limit");
     return NextResponse.json(tooManyAttempts(), { status: 429 });
   }
 
   const existing = await prisma.user.findUnique({ where: { email } });
   if (existing) {
+    logProductError("register_failed", null, "email_taken");
     return NextResponse.json({ error: "Email already registered." }, { status: 409 });
   }
 
@@ -65,7 +69,7 @@ export async function POST(request: Request) {
     where: { id: user.id },
     data: { lastLoginAt: now },
   });
-  void logProductEvent("register", user.id);
+  logProductEvent("register", user.id);
 
   return NextResponse.json({
     ok: true,

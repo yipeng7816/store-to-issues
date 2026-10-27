@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { logProductError } from "../../../lib/analytics";
 import { encryptSecret } from "../../../lib/crypto";
 import { prisma } from "../../../lib/prisma";
 import { requireUserId } from "../../../lib/session";
@@ -36,41 +37,47 @@ export async function PUT(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const body = (await request.json()) as Record<string, unknown>;
-  const existing = await prisma.userSettings.findUnique({ where: { userId } });
+  try {
+    const body = (await request.json()) as Record<string, unknown>;
+    const existing = await prisma.userSettings.findUnique({ where: { userId } });
 
-  const pickSecret = (incoming: unknown, previous: string | undefined) => {
-    if (typeof incoming === "string" && incoming.length > 0) {
-      return encryptSecret(incoming);
-    }
-    return previous || "";
-  };
+    const pickSecret = (incoming: unknown, previous: string | undefined) => {
+      if (typeof incoming === "string" && incoming.length > 0) {
+        return encryptSecret(incoming);
+      }
+      return previous || "";
+    };
 
-  const data = {
-    githubRepo: String(body.githubRepo ?? existing?.githubRepo ?? ""),
-    useMockReviews: Boolean(
-      body.useMockReviews ?? existing?.useMockReviews ?? true,
-    ),
-    minRating: Number(body.minRating ?? existing?.minRating ?? 3),
-    ascAppId: String(body.ascAppId ?? existing?.ascAppId ?? ""),
-    ascIssuerId: String(body.ascIssuerId ?? existing?.ascIssuerId ?? ""),
-    ascKeyId: String(body.ascKeyId ?? existing?.ascKeyId ?? ""),
-    googlePlayPackageName: String(
-      body.googlePlayPackageName ?? existing?.googlePlayPackageName ?? "",
-    ),
-    githubToken: pickSecret(body.githubToken, existing?.githubToken),
-    ascPrivateKey: pickSecret(body.ascPrivateKey, existing?.ascPrivateKey),
-    googlePlayServiceAccountJson: pickSecret(
-      body.googlePlayServiceAccountJson,
-      existing?.googlePlayServiceAccountJson,
-    ),
-  };
+    const data = {
+      githubRepo: String(body.githubRepo ?? existing?.githubRepo ?? ""),
+      useMockReviews: Boolean(
+        body.useMockReviews ?? existing?.useMockReviews ?? true,
+      ),
+      minRating: Number(body.minRating ?? existing?.minRating ?? 3),
+      ascAppId: String(body.ascAppId ?? existing?.ascAppId ?? ""),
+      ascIssuerId: String(body.ascIssuerId ?? existing?.ascIssuerId ?? ""),
+      ascKeyId: String(body.ascKeyId ?? existing?.ascKeyId ?? ""),
+      googlePlayPackageName: String(
+        body.googlePlayPackageName ?? existing?.googlePlayPackageName ?? "",
+      ),
+      githubToken: pickSecret(body.githubToken, existing?.githubToken),
+      ascPrivateKey: pickSecret(body.ascPrivateKey, existing?.ascPrivateKey),
+      googlePlayServiceAccountJson: pickSecret(
+        body.googlePlayServiceAccountJson,
+        existing?.googlePlayServiceAccountJson,
+      ),
+    };
 
-  await prisma.userSettings.upsert({
-    where: { userId },
-    create: { userId, ...data },
-    update: data,
-  });
+    await prisma.userSettings.upsert({
+      where: { userId },
+      create: { userId, ...data },
+      update: data,
+    });
 
-  return NextResponse.json({ ok: true });
+    return NextResponse.json({ ok: true });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    logProductError("settings_error", userId, message.slice(0, 200));
+    return NextResponse.json({ error: "Could not save settings." }, { status: 500 });
+  }
 }
